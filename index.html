@@ -115,6 +115,15 @@
           </button>
         </div>
 
+        <!-- Force Restore Sheet Data Button -->
+        <button id="forceRestoreSheetDataBtn" type="button" class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95" title="強制恢復 Google 試算表真實數據（10筆個人日常帳＋3筆公司公帳）">
+          <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span class="hidden sm:inline">恢復真實數據</span>
+          <span class="sm:hidden text-[11px]">恢復數據</span>
+        </button>
+
         <!-- GAS Database Button -->
         <button id="openGasModalBtn" type="button" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition" title="設定 Google Apps Script 試算表後端資料庫">
           <span id="gasStatusDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -279,8 +288,11 @@
           <span id="smartInputTitle">AI 智慧快速記帳</span>
         </div>
         <div class="flex items-center gap-2">
-          <button id="loadDemoBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 transition active:scale-95">
-            載入範例
+          <button id="loadDemoBtn" type="button" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-500/25 hover:bg-emerald-500/35 text-emerald-200 border border-emerald-400/40 transition active:scale-95 flex items-center gap-1" title="一鍵恢復試算表 10 筆個人真實收支與 3 筆公司公帳">
+            <svg class="w-3.5 h-3.5 text-emerald-300" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>還原真實數據 (10筆)</span>
           </button>
           <button id="clearAllBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 transition active:scale-95">
             清空帳本
@@ -1148,26 +1160,53 @@ function doPost(e) {
       } catch (e) {}
     }
 
-        function loadState() {
+        const CURRENT_MIGRATION_TAG = 'ai_ledger_v4_sheet_restored_20261021_v2';
+
+    function isDataOutdatedOrEmpty(txList) {
+      if (!Array.isArray(txList) || txList.length === 0) return true;
+      const hasRealItem = txList.some(t => t.id === 'tx_1792554647397_3msd9' || t.note === '買菸付' || t.note === '買3060TI');
+      return !hasRealItem;
+    }
+
+    function loadState() {
       const wn = readWindowNameCache();
-      
-      // Load Personal Transactions (Integrated with AI 智慧收支記帳本 (2026))
+      const migrationVersion = localStorage.getItem('ai_ledger_migration_version');
+
+      // 1. Force restore on first visit with new code or if existing data lacks the real transactions
+      let shouldForceRestore = false;
+      if (migrationVersion !== CURRENT_MIGRATION_TAG) {
+        shouldForceRestore = true;
+      }
+
+      if (shouldForceRestore) {
+        personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
+        companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
+        monthlyBudget = 25000;
+        companyCapital = 1500000;
+        try {
+          localStorage.setItem('ai_ledger_migration_version', CURRENT_MIGRATION_TAG);
+          localStorage.setItem(STORAGE_KEY_PERSONAL_TX, JSON.stringify(personalTransactions));
+          localStorage.setItem(STORAGE_KEY_COMPANY_TX, JSON.stringify(companyTransactions));
+          localStorage.setItem(STORAGE_KEY_BUDGET, String(monthlyBudget));
+          localStorage.setItem(STORAGE_KEY_COMPANY_CAPITAL, String(companyCapital));
+        } catch (e) {}
+        return;
+      }
+
+      // 2. Normal load with safety checks against empty/demo data
       try {
         const savedPersonal = localStorage.getItem(STORAGE_KEY_PERSONAL_TX);
-        if (savedPersonal && JSON.parse(savedPersonal).length > 0) {
-          personalTransactions = JSON.parse(savedPersonal);
-        } else if (Array.isArray(wn.personalTransactions) && wn.personalTransactions.length > 0) {
-          personalTransactions = wn.personalTransactions;
-        } else {
-          // Check legacy key
-          const oldSaved = localStorage.getItem(STORAGE_KEY_OLD_TX);
-          if (oldSaved && JSON.parse(oldSaved).length > 0) {
-            const oldArr = JSON.parse(oldSaved);
-            const p = oldArr.filter(t => t.account !== 'company' && t.category !== '公司支出' && t.category !== '公司收入');
-            personalTransactions = p.length > 0 ? p : [...SPREADSHEET_PERSONAL_TRANSACTIONS];
+        if (savedPersonal) {
+          const parsed = JSON.parse(savedPersonal);
+          if (Array.isArray(parsed) && parsed.length > 0 && !isDataOutdatedOrEmpty(parsed)) {
+            personalTransactions = parsed;
           } else {
             personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
           }
+        } else if (Array.isArray(wn.personalTransactions) && wn.personalTransactions.length > 0) {
+          personalTransactions = wn.personalTransactions;
+        } else {
+          personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
         }
       } catch (e) {
         personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
@@ -1176,8 +1215,13 @@ function doPost(e) {
       // Load Company Transactions
       try {
         const savedCompany = localStorage.getItem(STORAGE_KEY_COMPANY_TX);
-        if (savedCompany && JSON.parse(savedCompany).length > 0) {
-          companyTransactions = JSON.parse(savedCompany);
+        if (savedCompany) {
+          const parsed = JSON.parse(savedCompany);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            companyTransactions = parsed;
+          } else {
+            companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
+          }
         } else if (Array.isArray(wn.companyTransactions) && wn.companyTransactions.length > 0) {
           companyTransactions = wn.companyTransactions;
         } else {
@@ -1322,8 +1366,18 @@ function doPost(e) {
         google.script.run
           .withSuccessHandler(data => {
             if (data && data.status === 'ok') {
-              if (Array.isArray(data.personalTransactions)) personalTransactions = data.personalTransactions;
-              if (Array.isArray(data.companyTransactions)) companyTransactions = data.companyTransactions;
+              if (Array.isArray(data.personalTransactions) && data.personalTransactions.length > 0) {
+                personalTransactions = data.personalTransactions;
+              } else if (personalTransactions.length === 0) {
+                personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
+              }
+
+              if (Array.isArray(data.companyTransactions) && data.companyTransactions.length > 0) {
+                companyTransactions = data.companyTransactions;
+              } else if (companyTransactions.length === 0) {
+                companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
+              }
+
               if (data.monthlyBudget !== undefined) monthlyBudget = Number(data.monthlyBudget) || 25000;
               if (data.companyCapital !== undefined) companyCapital = Number(data.companyCapital) || 1500000;
               renderAll(true);
@@ -1351,12 +1405,28 @@ function doPost(e) {
         });
         const data = await res.json();
         if (data && data.status === 'ok') {
-          if (Array.isArray(data.personalTransactions)) {
+          if (Array.isArray(data.personalTransactions) && data.personalTransactions.length > 0) {
             personalTransactions = data.personalTransactions;
+          } else if (Array.isArray(data.transactions) && data.transactions.length > 0) {
+            const p = data.transactions.filter(t => t.account !== 'company');
+            if (p.length > 0) personalTransactions = p;
           }
-          if (Array.isArray(data.companyTransactions)) {
+
+          if (Array.isArray(data.companyTransactions) && data.companyTransactions.length > 0) {
             companyTransactions = data.companyTransactions;
+          } else if (Array.isArray(data.transactions) && data.transactions.length > 0) {
+            const c = data.transactions.filter(t => t.account === 'company');
+            if (c.length > 0) companyTransactions = c;
           }
+
+          // Safety guard: Never wipe transactions if cloud returns empty
+          if (personalTransactions.length === 0) {
+            personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
+          }
+          if (companyTransactions.length === 0) {
+            companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
+          }
+
           if (data.monthlyBudget !== undefined) {
             monthlyBudget = Number(data.monthlyBudget) || 25000;
           }
@@ -2335,15 +2405,25 @@ function doPost(e) {
     }
 
     // --- Sample Demo Data ---
-        function loadSampleData() {
+        function restoreSheetRealData() {
       companyCapital = 1500000;
       monthlyBudget = 25000;
       personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
       companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
       currentMonthFilter = '2026-10';
-      document.getElementById('monthFilterInput').value = '2026-10';
+      const mInput = document.getElementById('monthFilterInput');
+      if (mInput) mInput.value = '2026-10';
+      const allBtn = document.getElementById('allMonthsBtn');
+      if (allBtn) allBtn.className = 'text-[11px] sm:text-xs font-medium px-2 py-1 rounded-md text-slate-600 hover:bg-white transition ml-0.5';
+      try {
+        localStorage.setItem('ai_ledger_migration_version', CURRENT_MIGRATION_TAG);
+      } catch (e) {}
       renderAll();
-      showToast('已整合載入「AI 智慧收支記帳本 (2026)」的 10 筆個人真實收支與公司公帳數據！');
+      showToast('✅ 已成功恢復「AI 智慧收支記帳本 (2026)」的 10 筆個人真實收支與 3 筆公司公帳！');
+    }
+
+    function loadSampleData() {
+      restoreSheetRealData();
     }
 
     // --- DOMContentLoaded Initialization ---
@@ -2439,7 +2519,10 @@ function doPost(e) {
       });
 
       // Demo & Clear
-      document.getElementById('loadDemoBtn').addEventListener('click', loadSampleData);
+      const forceBtn = document.getElementById('forceRestoreSheetDataBtn');
+      if (forceBtn) forceBtn.addEventListener('click', restoreSheetRealData);
+      const demoBtn = document.getElementById('loadDemoBtn');
+      if (demoBtn) demoBtn.addEventListener('click', restoreSheetRealData);
       const clearBtn = document.getElementById('clearAllBtn');
       clearBtn.addEventListener('click', () => {
         if (!confirmClearPending) {
