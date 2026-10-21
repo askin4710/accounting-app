@@ -115,15 +115,6 @@
           </button>
         </div>
 
-        <!-- Force Restore Sheet Data Button -->
-        <button id="forceRestoreSheetDataBtn" type="button" class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition active:scale-95" title="強制恢復 Google 試算表真實數據（10筆個人日常帳＋3筆公司公帳）">
-          <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          <span class="hidden sm:inline">恢復真實數據</span>
-          <span class="sm:hidden text-[11px]">恢復數據</span>
-        </button>
-
         <!-- GAS Database Button -->
         <button id="openGasModalBtn" type="button" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition" title="設定 Google Apps Script 試算表後端資料庫">
           <span id="gasStatusDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -288,12 +279,6 @@
           <span id="smartInputTitle">AI 智慧快速記帳</span>
         </div>
         <div class="flex items-center gap-2">
-          <button id="loadDemoBtn" type="button" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-500/25 hover:bg-emerald-500/35 text-emerald-200 border border-emerald-400/40 transition active:scale-95 flex items-center gap-1" title="一鍵恢復試算表 10 筆個人真實收支與 3 筆公司公帳">
-            <svg class="w-3.5 h-3.5 text-emerald-300" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span>還原真實數據 (10筆)</span>
-          </button>
           <button id="clearAllBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 transition active:scale-95">
             清空帳本
           </button>
@@ -944,7 +929,32 @@
     const STORAGE_KEY_BUDGET = 'ai_ledger_budget_v1';
     const STORAGE_KEY_GAS_URL = 'ai_ledger_gas_webapp_url_v1';
     const STORAGE_KEY_COMPANY_CAPITAL = 'ai_ledger_company_capital_v1';
-    const TODAY_STR = '2026-10-20';
+        // --- Dynamic Real-time Date Helpers ---
+    function getClientTodayStr() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function getRelativeDateStr(offsetDays = 0) {
+      const target = new Date();
+      target.setDate(target.getDate() + offsetDays);
+      const y = target.getFullYear();
+      const m = String(target.getMonth() + 1).padStart(2, '0');
+      const d = String(target.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function getCurrentMonthStr() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      return `${y}-${m}`;
+    }
+
+    const TODAY_STR = getClientTodayStr();
 
     let gasWebAppUrl = 'https://script.google.com/macros/s/AKfycbwU0-6SLpDA2hmbXR5BqXb8bONL7fyPFCVQ9pHTz6Ap2utSFdcjAV0duCH1QDLz3p5k/exec';
     let isSyncingGas = false;
@@ -1160,75 +1170,42 @@ function doPost(e) {
       } catch (e) {}
     }
 
-        const CURRENT_MIGRATION_TAG = 'ai_ledger_v4_sheet_restored_20261021_v2';
-
-    function isDataOutdatedOrEmpty(txList) {
-      if (!Array.isArray(txList) || txList.length === 0) return true;
-      const hasRealItem = txList.some(t => t.id === 'tx_1792554647397_3msd9' || t.note === '買菸付' || t.note === '買3060TI');
-      return !hasRealItem;
-    }
-
-    function loadState() {
+        function loadState() {
       const wn = readWindowNameCache();
-      const migrationVersion = localStorage.getItem('ai_ledger_migration_version');
 
-      // 1. Force restore on first visit with new code or if existing data lacks the real transactions
-      let shouldForceRestore = false;
-      if (migrationVersion !== CURRENT_MIGRATION_TAG) {
-        shouldForceRestore = true;
-      }
-
-      if (shouldForceRestore) {
-        personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
-        companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
-        monthlyBudget = 25000;
-        companyCapital = 1500000;
-        try {
-          localStorage.setItem('ai_ledger_migration_version', CURRENT_MIGRATION_TAG);
-          localStorage.setItem(STORAGE_KEY_PERSONAL_TX, JSON.stringify(personalTransactions));
-          localStorage.setItem(STORAGE_KEY_COMPANY_TX, JSON.stringify(companyTransactions));
-          localStorage.setItem(STORAGE_KEY_BUDGET, String(monthlyBudget));
-          localStorage.setItem(STORAGE_KEY_COMPANY_CAPITAL, String(companyCapital));
-        } catch (e) {}
-        return;
-      }
-
-      // 2. Normal load with safety checks against empty/demo data
+      // Load Personal Transactions (Strictly preserves user manual updates)
       try {
         const savedPersonal = localStorage.getItem(STORAGE_KEY_PERSONAL_TX);
-        if (savedPersonal) {
-          const parsed = JSON.parse(savedPersonal);
-          if (Array.isArray(parsed) && parsed.length > 0 && !isDataOutdatedOrEmpty(parsed)) {
-            personalTransactions = parsed;
-          } else {
-            personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
-          }
-        } else if (Array.isArray(wn.personalTransactions) && wn.personalTransactions.length > 0) {
+        if (savedPersonal !== null) {
+          personalTransactions = JSON.parse(savedPersonal) || [];
+        } else if (Array.isArray(wn.personalTransactions)) {
           personalTransactions = wn.personalTransactions;
         } else {
-          personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
+          // Check legacy key
+          const oldSaved = localStorage.getItem(STORAGE_KEY_OLD_TX);
+          if (oldSaved !== null) {
+            const oldArr = JSON.parse(oldSaved) || [];
+            personalTransactions = oldArr.filter(t => t.account !== 'company' && t.category !== '公司支出' && t.category !== '公司收入');
+          } else {
+            personalTransactions = (typeof SPREADSHEET_PERSONAL_TRANSACTIONS !== 'undefined') ? [...SPREADSHEET_PERSONAL_TRANSACTIONS] : [];
+          }
         }
       } catch (e) {
-        personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
+        personalTransactions = [];
       }
 
       // Load Company Transactions
       try {
         const savedCompany = localStorage.getItem(STORAGE_KEY_COMPANY_TX);
-        if (savedCompany) {
-          const parsed = JSON.parse(savedCompany);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            companyTransactions = parsed;
-          } else {
-            companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
-          }
-        } else if (Array.isArray(wn.companyTransactions) && wn.companyTransactions.length > 0) {
+        if (savedCompany !== null) {
+          companyTransactions = JSON.parse(savedCompany) || [];
+        } else if (Array.isArray(wn.companyTransactions)) {
           companyTransactions = wn.companyTransactions;
         } else {
-          companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
+          companyTransactions = (typeof SPREADSHEET_COMPANY_TRANSACTIONS !== 'undefined') ? [...SPREADSHEET_COMPANY_TRANSACTIONS] : [];
         }
       } catch (e) {
-        companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
+        companyTransactions = [];
       }
 
       // Load Budget & Capital
@@ -1543,7 +1520,7 @@ function doPost(e) {
 
       for (const seg of segments) {
         let text = seg;
-        let dateStr = TODAY_STR;
+        let dateStr = getClientTodayStr(); // Accurate to current real date
 
         const fullDateMatch = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
         const shortDateMatch = text.match(/(?:^|\s)(\d{1,2})[/.月](\d{1,2})日?(?=\s|$|[^\d])/);
@@ -1555,18 +1532,32 @@ function doPost(e) {
           dateStr = `${y}-${m}-${d}`;
           text = text.replace(fullDateMatch[0], ' ').trim();
         } else if (shortDateMatch) {
+          const curYear = new Date().getFullYear();
           const m = String(shortDateMatch[1]).padStart(2, '0');
           const d = String(shortDateMatch[2]).padStart(2, '0');
-          dateStr = `2026-${m}-${d}`;
+          dateStr = `${curYear}-${m}-${d}`;
           text = text.replace(shortDateMatch[0], ' ').trim();
         }
 
-        if (text.includes('昨天') || text.includes('昨日')) {
-          dateStr = '2026-10-18';
+        // Relative date keyword parsing based on current actual date
+        if (text.includes('今天') || text.includes('今日')) {
+          dateStr = getClientTodayStr();
+          text = text.replace(/今天|今日/g, ' ').trim();
+        } else if (text.includes('昨天') || text.includes('昨日')) {
+          dateStr = getRelativeDateStr(-1);
           text = text.replace(/昨天|昨日/g, ' ').trim();
         } else if (text.includes('前天')) {
-          dateStr = '2026-10-17';
+          dateStr = getRelativeDateStr(-2);
           text = text.replace(/前天/g, ' ').trim();
+        } else if (text.includes('大前天')) {
+          dateStr = getRelativeDateStr(-3);
+          text = text.replace(/大前天/g, ' ').trim();
+        } else if (text.includes('明天') || text.includes('明日')) {
+          dateStr = getRelativeDateStr(1);
+          text = text.replace(/明天|明日/g, ' ').trim();
+        } else if (text.includes('後天')) {
+          dateStr = getRelativeDateStr(2);
+          text = text.replace(/後天/g, ' ').trim();
         }
 
         const amountMatches = [...text.matchAll(/(?:\$|NT\$)?\s*(\d+(?:\.\d+)?)\s*(?:元|塊)?/gi)];
@@ -2405,31 +2396,22 @@ function doPost(e) {
     }
 
     // --- Sample Demo Data ---
-        function restoreSheetRealData() {
-      companyCapital = 1500000;
-      monthlyBudget = 25000;
-      personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
-      companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
-      currentMonthFilter = '2026-10';
+        function loadSampleData() {
+      // Harmless demo loader if ever needed
+      currentMonthFilter = getCurrentMonthStr();
       const mInput = document.getElementById('monthFilterInput');
-      if (mInput) mInput.value = '2026-10';
-      const allBtn = document.getElementById('allMonthsBtn');
-      if (allBtn) allBtn.className = 'text-[11px] sm:text-xs font-medium px-2 py-1 rounded-md text-slate-600 hover:bg-white transition ml-0.5';
-      try {
-        localStorage.setItem('ai_ledger_migration_version', CURRENT_MIGRATION_TAG);
-      } catch (e) {}
+      if (mInput) mInput.value = currentMonthFilter;
       renderAll();
-      showToast('✅ 已成功恢復「AI 智慧收支記帳本 (2026)」的 10 筆個人真實收支與 3 筆公司公帳！');
-    }
-
-    function loadSampleData() {
-      restoreSheetRealData();
+      showToast('已重整當前檢視！');
     }
 
     // --- DOMContentLoaded Initialization ---
     window.addEventListener('DOMContentLoaded', () => {
       loadState();
-      document.getElementById('entryDate').value = TODAY_STR;
+      document.getElementById('entryDate').value = getClientTodayStr();
+      currentMonthFilter = getCurrentMonthStr();
+      const initialMonthPicker = document.getElementById('monthFilterInput');
+      if (initialMonthPicker) initialMonthPicker.value = currentMonthFilter;
       document.getElementById('gasCodeTextarea').value = GAS_CODE_TEMPLATE;
       document.getElementById('gasWebAppUrlInput').value = gasWebAppUrl;
       
@@ -2506,6 +2488,16 @@ function doPost(e) {
           }
         });
 
+        // Auto-switch month filter if new transaction is in a different month, ensuring user immediately sees it
+        if (parsed.length > 0 && currentMonthFilter !== 'all') {
+          const firstTxMonth = parsed[0].date.slice(0, 7);
+          if (currentMonthFilter !== firstTxMonth) {
+            currentMonthFilter = firstTxMonth;
+            const mInput = document.getElementById('monthFilterInput');
+            if (mInput) mInput.value = firstTxMonth;
+          }
+        }
+
         input.value = '';
         renderAll();
 
@@ -2518,11 +2510,7 @@ function doPost(e) {
         }
       });
 
-      // Demo & Clear
-      const forceBtn = document.getElementById('forceRestoreSheetDataBtn');
-      if (forceBtn) forceBtn.addEventListener('click', restoreSheetRealData);
-      const demoBtn = document.getElementById('loadDemoBtn');
-      if (demoBtn) demoBtn.addEventListener('click', restoreSheetRealData);
+      // Clear Ledger
       const clearBtn = document.getElementById('clearAllBtn');
       clearBtn.addEventListener('click', () => {
         if (!confirmClearPending) {
@@ -2565,7 +2553,7 @@ function doPost(e) {
         const editId = document.getElementById('editTxId').value;
         const type = document.getElementById('entryType').value;
         const account = document.getElementById('entryAccount').value || currentAccountMode;
-        const date = document.getElementById('entryDate').value || TODAY_STR;
+        const date = document.getElementById('entryDate').value || getClientTodayStr();
         const amount = Math.round(Number(document.getElementById('entryAmount').value || 0));
         const category = document.getElementById('entryCategory').value;
         const payment = document.getElementById('entryPayment').value;
@@ -2957,7 +2945,7 @@ function doPost(e) {
 
     function resetManualForm() {
       document.getElementById('editTxId').value = '';
-      document.getElementById('entryDate').value = TODAY_STR;
+      document.getElementById('entryDate').value = getClientTodayStr();
       document.getElementById('entryAmount').value = '';
       document.getElementById('entryNote').value = '';
       document.getElementById('formTitle').textContent = '手動記帳 / 編輯';
@@ -2967,7 +2955,7 @@ function doPost(e) {
     }
 
     function shiftMonth(delta) {
-      const base = currentMonthFilter === 'all' ? '2026-10' : currentMonthFilter;
+      const base = currentMonthFilter === 'all' ? getCurrentMonthStr() : currentMonthFilter;
       const [y, m] = base.split('-').map(Number);
       const d = new Date(y, m - 1 + delta, 1);
       const nextY = d.getFullYear();
