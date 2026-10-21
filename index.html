@@ -191,63 +191,6 @@
       </div>
     </section>
 
-    <!-- Prominent 1-Click Google Apps Script Setup Banner -->
-    <section id="gasQuickSetupBanner" data-mobile-view="cloud" class="bg-indigo-950 border border-indigo-800 rounded-2xl p-4 sm:p-5 text-white shadow-md space-y-3.5">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-800/80 pb-3">
-        <div class="space-y-1">
-          <div class="inline-flex items-center gap-2 text-xs font-bold text-amber-300">
-            <span class="px-2 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/40">免新增 HTML 檔・單一檔案極簡版</span>
-            <span>跨裝置 Google 雲端試算表資料庫綁定</span>
-          </div>
-          <h2 class="text-sm sm:text-lg font-bold">✅ 已永久綁定 Google 雲端試算表！手機與電腦皆會自動連線同步</h2>
-        </div>
-        <button id="toggleGasBannerBtn" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-indigo-100 self-start sm:self-center shrink-0 transition">
-          展開設定詳情
-        </button>
-      </div>
-
-      <div id="gasBannerBody" class="hidden space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-          <!-- Step 1 -->
-          <div class="bg-white/10 rounded-xl p-3.5 border border-white/10 flex flex-col justify-between space-y-2.5">
-            <div class="space-y-1">
-              <div class="font-bold text-indigo-200">步驟 1：複製下方合一版程式碼</div>
-              <p class="text-slate-300 leading-relaxed">點擊下方黃色按鈕會自動全選並複製下方黑框內的程式碼（若瀏覽器阻擋自動複製，全選後按 <kbd class="px-1 py-0.5 bg-black/40 rounded text-amber-200">Ctrl+C</kbd> 即可）：</p>
-            </div>
-            <textarea id="bannerVisibleGasCode" rows="4" readonly class="w-full p-2 rounded-lg bg-slate-950 text-emerald-300 font-mono text-[10px] leading-snug border border-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-amber-400 custom-scrollbar" title="點選自動全選程式碼"></textarea>
-            <button id="bannerCopyAllInOneGasBtn" type="button" class="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs transition shadow-sm flex items-center justify-center gap-1.5">
-              📋 點此一鍵複製完整 Apps Script 程式碼
-            </button>
-          </div>
-
-          <!-- Step 2 -->
-          <div class="bg-white/10 rounded-xl p-3.5 border border-white/10 flex flex-col justify-between space-y-3">
-            <div class="space-y-1">
-              <div class="font-bold text-indigo-200">步驟 2：貼入試算表的 Apps Script</div>
-              <p class="text-slate-300 leading-relaxed">點下方按鈕打開試算表 → 點頂端選單「<strong>擴充功能</strong>」→「<strong>Apps Script</strong>」→ 刪掉原本那幾行字，貼上剛才複製的程式碼並按 <kbd class="px-1 py-0.5 bg-black/30 rounded">Ctrl+S</kbd> 儲存。</p>
-            </div>
-            <a href="https://docs.google.com/spreadsheets/d/1zsu2Z_fxVNWwAMixApr98tZI83_QBchGtITgt7V8t6I/edit" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-sm flex items-center justify-center gap-1.5 text-center">
-              ↗ 點此開啟「AI 智慧收支記帳本」試算表
-            </a>
-          </div>
-
-          <!-- Step 3 -->
-          <div class="bg-white/10 rounded-xl p-3.5 border border-white/10 flex flex-col justify-between space-y-3">
-            <div class="space-y-1">
-              <div class="font-bold text-indigo-200">步驟 3：部署為網頁應用程式</div>
-              <p class="text-slate-300 leading-relaxed">在 Apps Script 右上角點「<strong>部署</strong>」→「<strong>新增部署作業</strong>」→ 左上角齒輪選「<strong>網頁應用程式</strong>」→ 按「部署」並授權，即可用產生的網址在任何手機/電腦登入編輯！</p>
-            </div>
-            <div class="flex gap-1.5">
-              <input id="bannerGasUrlInput" type="url" placeholder="也可將部署後的 https://script.google.com/.../exec 貼此同步" class="flex-1 px-2.5 py-2 rounded-lg bg-white/95 text-slate-900 text-xs focus:outline-none" />
-              <button id="bannerSaveGasUrlBtn" type="button" class="px-3 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs shrink-0 transition">
-                連線
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- AI Smart Quick Input Card -->
     <section id="aiSmartInputSection" data-mobile-view="record" class="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-900 rounded-2xl p-4 sm:p-5 text-white shadow-md">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -1793,8 +1736,6 @@ function doPost(e) {
       document.getElementById('entryDate').value = TODAY_STR;
       document.getElementById('gasCodeTextarea').value = GAS_CODE_TEMPLATE;
       document.getElementById('gasWebAppUrlInput').value = gasWebAppUrl;
-      const bInput = document.getElementById('bannerGasUrlInput');
-      if (bInput && gasWebAppUrl) bInput.value = gasWebAppUrl;
       populateEntryCategories('expense');
       populateFilterCategories();
       renderAll(true);
@@ -2108,74 +2049,12 @@ function doPost(e) {
         showToast('已匯出 JSON 備份檔！');
       });
 
-      // Top Banner Controls
-      if (IS_GAS_HOSTED) {
-        const bannerEl = document.getElementById('gasQuickSetupBanner');
-        if (bannerEl) bannerEl.classList.add('hidden');
-      }
-      document.getElementById('toggleGasBannerBtn').addEventListener('click', () => {
-        const body = document.getElementById('gasBannerBody');
-        const btn = document.getElementById('toggleGasBannerBtn');
-        const isHidden = body.classList.toggle('hidden');
-        btn.textContent = isHidden ? '展開設定詳情' : '收合設定詳情';
-      });
-
-      const bannerCodeBox = document.getElementById('bannerVisibleGasCode');
-      if (bannerCodeBox) {
-        bannerCodeBox.value = buildAllInOneGasCode();
-        bannerCodeBox.addEventListener('click', () => {
-          bannerCodeBox.select();
-          bannerCodeBox.setSelectionRange(0, bannerCodeBox.value.length);
-        });
-      }
-
-      function syncCopyFromTextarea(textareaEl, successMsg) {
-        if (!textareaEl) return;
-        textareaEl.focus();
-        textareaEl.select();
-        textareaEl.setSelectionRange(0, textareaEl.value.length);
-        let copied = false;
-        try {
-          copied = document.execCommand('copy');
-        } catch (e) {
-          copied = false;
-        }
-        if (copied) {
-          showToast(successMsg);
-        } else {
-          showToast('已全選黑框程式碼，請按鍵盤 Ctrl+C 複製！', 'info');
-        }
-      }
-
-      document.getElementById('bannerCopyAllInOneGasBtn').addEventListener('click', () => {
-        const fullGasCode = buildAllInOneGasCode();
-        const visibleBox = document.getElementById('bannerVisibleGasCode');
-        const modalBox = document.getElementById('gasCodeTextarea');
-        if (visibleBox) visibleBox.value = fullGasCode;
-        if (modalBox) modalBox.value = fullGasCode;
-        syncCopyFromTextarea(visibleBox, '✅ 已複製完整 Apps Script 程式碼！');
-        const btn = document.getElementById('bannerCopyAllInOneGasBtn');
-        btn.textContent = '✅ 已全選並複製！';
-      });
-
-      document.getElementById('bannerSaveGasUrlBtn').addEventListener('click', async () => {
-        const urlVal = document.getElementById('bannerGasUrlInput').value.trim();
-        if (!urlVal) {
-          showToast('請先貼上 Apps Script 網頁應用程式網址', 'error');
-          return;
-        }
-        gasWebAppUrl = urlVal;
-        document.getElementById('gasWebAppUrlInput').value = urlVal;
-        saveState(true);
-        await pullStateFromGasCloud(false);
-      });
+      
 
       // GAS Modal Controls
       const gasModal = document.getElementById('gasConfigModal');
       const openGasModal = () => {
         document.getElementById('gasWebAppUrlInput').value = gasWebAppUrl;
-        const bInput = document.getElementById('bannerGasUrlInput');
-        if (bInput && gasWebAppUrl) bInput.value = gasWebAppUrl;
         gasModal.classList.remove('hidden');
         gasModal.classList.add('flex');
       };
@@ -2208,6 +2087,24 @@ function doPost(e) {
       document.getElementById('copyFullHtmlBtn').addEventListener('click', () => {
         showToast('已整合為單一檔案，無須額外複製 HTML！');
       });
+
+            function syncCopyFromTextarea(textareaEl, successMsg) {
+        if (!textareaEl) return;
+        textareaEl.focus();
+        textareaEl.select();
+        textareaEl.setSelectionRange(0, textareaEl.value.length);
+        let copied = false;
+        try {
+          copied = document.execCommand('copy');
+        } catch (e) {
+          copied = false;
+        }
+        if (copied) {
+          showToast(successMsg);
+        } else {
+          showToast('已全選程式碼，請按鍵盤 Ctrl+C 複製！', 'info');
+        }
+      }
 
       document.getElementById('copyGasCodeBtn').addEventListener('click', () => {
         const codeArea = document.getElementById('gasCodeTextarea');
