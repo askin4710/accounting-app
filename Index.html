@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 智慧記帳助理 — 收支管理與預算分析</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-teal-500 selection:text-white">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-600 to-emerald-500 flex items-center justify-center text-white shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            AI 智慧記帳助理
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">對話＋雲端雙同步版</span>
+          </h1>
+          <p class="text-xs text-slate-500">支援自然語意輸入、分類圖表統計與對話即時記帳</p>
+        </div>
+      </div>
+
+      <!-- Month Selector & Quick Actions -->
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
+          <button id="prevMonthBtn" type="button" class="p-1.5 rounded-md hover:bg-white hover:shadow-sm text-slate-600 transition" title="上個月">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <input id="monthFilterInput" type="month" value="2026-10" class="bg-transparent text-sm font-semibold text-slate-800 px-2 py-0.5 focus:outline-none cursor-pointer" />
+          <button id="nextMonthBtn" type="button" class="p-1.5 rounded-md hover:bg-white hover:shadow-sm text-slate-600 transition" title="下個月">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          <button id="allMonthsBtn" type="button" class="text-xs font-medium px-2.5 py-1 rounded-md text-slate-600 hover:bg-white hover:shadow-sm transition ml-0.5">
+            全部期間
+          </button>
+        </div>
+
+        <button id="openGasModalBtn" type="button" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition" title="設定 Google Apps Script 試算表後端資料庫">
+          <span id="gasStatusDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span id="gasStatusText">雲端資料庫已連線</span>
+        </button>
+        <a href="https://docs.google.com/spreadsheets/d/1zsu2Z_fxVNWwAMixApr98tZI83_QBchGtITgt7V8t6I/edit" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition" title="開啟 Google 雲端試算表">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+          </svg>
+          開啟試算表
+        </a>
+        <button id="openChatSyncModalBtn" type="button" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+          對話同步 / 匯出
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- Prominent 1-Click Google Apps Script Setup Banner -->
+    <section id="gasQuickSetupBanner" class="bg-indigo-950 border border-indigo-800 rounded-2xl p-5 text-white shadow-md space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-800/80 pb-3.5">
+        <div class="space-y-1">
+          <div class="inline-flex items-center gap-2 text-xs font-bold text-amber-300">
+            <span class="px-2 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/40">免新增 HTML 檔・單一檔案極簡版</span>
+            <span>跨裝置 Google 雲端試算表資料庫綁定</span>
+          </div>
+          <h2 class="text-base sm:text-lg font-bold">✅ 已永久綁定 Google 雲端試算表資料庫！重新整理或跨裝置開啟皆會自動連線同步</h2>
+        </div>
+        <button id="toggleGasBannerBtn" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-indigo-100 self-start sm:self-center shrink-0 transition">
+          展開設定詳情
+        </button>
+      </div>
+
+      <div id="gasBannerBody" class="hidden space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <!-- Step 1 -->
+          <div class="bg-white/10 rounded-xl p-3.5 border border-white/10 flex flex-col justify-between space-y-2.5">
+            <div class="space-y-1">
+              <div class="font-bold text-indigo-200">步驟 1：複製下方合一版程式碼</div>
+              <p class="text-slate-300 leading-relaxed">點擊下方黃色按鈕會自動全選並複製下方黑框內的程式碼（若瀏覽器阻擋自動複製，全選後按 <kbd class="px-1 py-0.5 bg-black/40 rounded text-amber-200">Ctrl+C</kbd> 即可）：</p>
+            </div>
+            <textarea id="bannerVisibleGasCode" rows="4" readonly class="w-full p-2 rounded-lg bg-slate-950 text-emerald-300 font-mono text-[10px] leading-snug border border-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-amber-400 custom-scrollbar" title="點選自動全選程式碼"></textarea>
+            <button id="bannerCopyAllInOneGasBtn" type="button" class="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs transition shadow-sm flex items-center justify-center gap-1.5">
+              📋 點此一鍵複製完整 Apps Script 程式碼
+            </button>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="bg-white/10 rounded-xl p-3.5 border border-white/10 flex flex-col justify-between space-y-3">
+            <div class="space-y-1">
+              <div class="font-bold text-indigo-200">步驟 2：貼入試算表的 Apps Script</div>
+              <p class="text-slate-300 leading-relaxed">點下方按鈕打開試算表 → 點頂端選單「<strong>擴充功能</strong>」→「<strong>Apps Script</strong>」→ 刪掉原本那幾行字，貼上剛才複製的程式碼並按 <kbd class="px-1 py-0.5 bg-black/30 rounded">Ctrl+S</kbd> 儲存。</p>
+            </div>
+            <a href="https://docs.google.com/spreadsheets/d/1zsu2Z_fxVNWwAMixApr98tZI83_QBchGtITgt7V8t6I/edit" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-sm flex items-center justify-center gap-1.5 text-center">
+              ↗ 點此開啟「AI 智慧收支記帳本」試算表
+            </a>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="bg-white/10 rounded-xl p-3.5 border border-white/10 flex flex-col justify-between space-y-3">
+            <div class="space-y-1">
+              <div class="font-bold text-indigo-200">步驟 3：部署為網頁應用程式</div>
+              <p class="text-slate-300 leading-relaxed">在 Apps Script 右上角點「<strong>部署</strong>」→「<strong>新增部署作業</strong>」→ 左上角齒輪選「<strong>網頁應用程式</strong>」→ 按「部署」並授權，即可用產生的網址在任何手機/電腦登入編輯！</p>
+            </div>
+            <div class="flex gap-1.5">
+              <input id="bannerGasUrlInput" type="url" placeholder="也可將部署後的 https://script.google.com/.../exec 貼此同步" class="flex-1 px-2.5 py-2 rounded-lg bg-white/95 text-slate-900 text-xs focus:outline-none" />
+              <button id="bannerSaveGasUrlBtn" type="button" class="px-3 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs shrink-0 transition">
+                連線
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI Smart Quick Input Card -->
+    <section class="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-900 rounded-2xl p-5 text-white shadow-md">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-300 uppercase tracking-wider">
+            <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+            AI 智慧語意快速記帳
+          </div>
+          <h2 class="text-base sm:text-lg font-bold">直接輸入一句話或多筆明細，自動辨識分類、日期與收支</h2>
+          <p class="text-xs text-slate-300">支援逗號或換行批次輸入，例如：<code class="bg-white/10 px-1.5 py-0.5 rounded text-teal-200">午餐牛肉麵 160, 捷運 35, 10/18 薪資 45000</code></p>
+        </div>
+        <div class="flex items-center gap-2 self-start md:self-center">
+          <button id="loadDemoBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 transition">
+            載入範例體驗
+          </button>
+          <button id="clearAllBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 transition">
+            清空帳本
+          </button>
+        </div>
+      </div>
+
+      <form id="smartInputForm" class="mt-4 flex flex-col sm:flex-row gap-2.5">
+        <div class="relative flex-1">
+          <input
+            id="smartInputText"
+            type="text"
+            placeholder="輸入如：早餐蛋餅 65、星巴克拿鐵 155 LINE Pay、10/15 稿費收入 3600..."
+            class="w-full px-4 py-3 rounded-xl bg-white/95 text-slate-900 placeholder-slate-400 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400 shadow-inner"
+          />
+        </div>
+        <button
+          type="submit"
+          class="px-5 py-3 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-sm transition flex items-center justify-center gap-1.5 shadow-sm shrink-0"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          智慧解析記帳
+        </button>
+      </form>
+
+      <!-- Quick Sample Chips -->
+      <div class="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
+        <span class="text-slate-400 mr-1">點選快速填入：</span>
+        <button type="button" data-quick="午餐便當 125" class="quick-chip px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition">+ 午餐便當 $125</button>
+        <button type="button" data-quick="捷運通勤 40 悠遊卡" class="quick-chip px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition">+ 捷運通勤 $40</button>
+        <button type="button" data-quick="全聯採買日用品 480 信用卡" class="quick-chip px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition">+ 全聯採買 $480</button>
+        <button type="button" data-quick="10月薪資收入 48000 轉帳" class="quick-chip px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 transition">+ 薪資收入 $48,000</button>
+      </div>
+    </section>
+
+    <!-- Summary KPI Cards & Monthly Budget -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Total Expense -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">期間總支出</span>
+          <span class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiExpense" class="text-2xl font-bold text-slate-900">NT$ 0</div>
+          <div id="kpiExpenseCount" class="text-xs text-slate-500 mt-1">共 0 筆支出紀錄</div>
+        </div>
+      </div>
+
+      <!-- Total Income -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">期間總收入</span>
+          <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiIncome" class="text-2xl font-bold text-emerald-600">NT$ 0</div>
+          <div id="kpiIncomeCount" class="text-xs text-slate-500 mt-1">共 0 筆收入紀錄</div>
+        </div>
+      </div>
+
+      <!-- Net Balance -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">期間淨結餘</span>
+          <span class="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiBalance" class="text-2xl font-bold text-slate-900">NT$ 0</div>
+          <div id="kpiSavingsRate" class="text-xs text-slate-500 mt-1">儲蓄率：--</div>
+        </div>
+      </div>
+
+      <!-- Monthly Expense Budget -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">每月支出預算</span>
+          <button id="editBudgetBtn" type="button" class="text-xs font-semibold text-teal-600 hover:text-teal-700 underline">
+            設定預算
+          </button>
+        </div>
+        <div class="mt-2">
+          <div class="flex items-baseline justify-between">
+            <span id="kpiBudgetRemain" class="text-lg font-bold text-slate-900">剩餘 NT$ 25,000</span>
+            <span id="kpiBudgetPct" class="text-xs font-semibold text-slate-500">0%</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden mt-2">
+            <div id="budgetProgressBar" class="h-full bg-teal-500 transition-all duration-300 rounded-full" style="width: 0%"></div>
+          </div>
+          <div id="kpiBudgetSub" class="text-xs text-slate-500 mt-1.5">預算上限 NT$ 25,000</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Grid: Left Manual Entry + Charts, Right Ledger List -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- Left Column (5 cols): Manual Form & Visual Breakdown -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- Manual Transaction Form -->
+        <section class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h3 id="formTitle" class="text-base font-bold text-slate-900">新增收支紀錄</h3>
+            <div class="inline-flex rounded-lg p-1 bg-slate-100 border border-slate-200">
+              <button type="button" id="typeExpenseBtn" class="px-3.5 py-1 rounded-md text-xs font-bold bg-rose-500 text-white shadow-sm transition">
+                支出
+              </button>
+              <button type="button" id="typeIncomeBtn" class="px-3.5 py-1 rounded-md text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+                收入
+              </button>
+            </div>
+          </div>
+
+          <form id="manualEntryForm" class="space-y-3.5">
+            <input type="hidden" id="editTxId" value="" />
+            <input type="hidden" id="entryType" value="expense" />
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="entryDate" class="block text-xs font-semibold text-slate-600 mb-1">日期</label>
+                <input id="entryDate" type="date" required class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              </div>
+              <div>
+                <label for="entryAmount" class="block text-xs font-semibold text-slate-600 mb-1">金額 (NT$)</label>
+                <input id="entryAmount" type="number" min="1" step="1" required placeholder="例如：150" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="entryCategory" class="block text-xs font-semibold text-slate-600 mb-1">分類</label>
+                <select id="entryCategory" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"></select>
+              </div>
+              <div>
+                <label for="entryPayment" class="block text-xs font-semibold text-slate-600 mb-1">支付 / 帳戶方式</label>
+                <select id="entryPayment" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  <option value="現金">現金</option>
+                  <option value="信用卡">信用卡</option>
+                  <option value="行動支付">行動支付 (LINE Pay/街口)</option>
+                  <option value="悠遊卡/一卡通">悠遊卡 / 一卡通</option>
+                  <option value="銀行轉帳">銀行轉帳 / 帳戶</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label for="entryNote" class="block text-xs font-semibold text-slate-600 mb-1">品項說明 / 備註</label>
+              <input id="entryNote" type="text" placeholder="例如：商業午餐、高鐵票、專案獎金..." class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+              <button type="submit" id="submitEntryBtn" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm transition shadow-sm">
+                儲存這筆紀錄
+              </button>
+              <button type="button" id="cancelEditBtn" class="hidden py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition">
+                取消編輯
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Category & Trend Charts Card -->
+        <section class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-slate-900">收支結構分析</h3>
+            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 text-xs">
+              <button type="button" id="chartTabCategory" class="px-2.5 py-1 rounded-md font-semibold bg-white shadow-sm text-slate-800">支出分類佔比</button>
+              <button type="button" id="chartTabTrend" class="px-2.5 py-1 rounded-md font-semibold text-slate-600 hover:text-slate-900">每日收支趨勢</button>
+            </div>
+          </div>
+
+          <div id="categoryChartContainer" class="space-y-4">
+            <div class="relative h-56">
+              <canvas id="categoryChartCanvas"></canvas>
+              <div id="categoryEmptyState" class="absolute inset-0 flex flex-col items-center justify-center text-center p-4 bg-slate-50/80 rounded-xl">
+                <p class="text-sm font-medium text-slate-500">目前期間尚無支出資料</p>
+                <p class="text-xs text-slate-400 mt-1">新增支出或點選上方「載入範例體驗」即可查看圓餅圖</p>
+              </div>
+            </div>
+            <!-- Category Progress List -->
+            <div id="categoryBreakdownList" class="space-y-2.5 max-h-52 overflow-y-auto custom-scrollbar pr-1"></div>
+          </div>
+
+          <div id="trendChartContainer" class="hidden">
+            <div class="relative h-64">
+              <canvas id="trendChartCanvas"></canvas>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Right Column (7 cols): Transaction Ledger List & Filters -->
+      <section class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">收支明細帳本</h3>
+            <p id="ledgerSubtitle" class="text-xs text-slate-500 mt-0.5">顯示 2026年10月 的所有交易</p>
+          </div>
+
+          <!-- Filters -->
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="filterType" class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="all">全部收支</option>
+              <option value="expense">僅看支出</option>
+              <option value="income">僅看收入</option>
+            </select>
+
+            <select id="filterCategory" class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="all">所有分類</option>
+            </select>
+
+            <div class="relative">
+              <input id="searchKeyword" type="text" placeholder="搜尋品項或備註..." class="pl-7 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 w-36 sm:w-44" />
+              <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transaction List -->
+        <div id="transactionListContainer" class="divide-y divide-slate-100 max-h-[600px] overflow-y-auto custom-scrollbar my-2"></div>
+
+        <!-- Empty State -->
+        <div id="ledgerEmptyState" class="py-14 text-center space-y-3">
+          <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div class="space-y-1">
+            <p class="text-sm font-semibold text-slate-700">目前沒有符合條件的收支紀錄</p>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">你可以在上方「AI 智慧語意快速記帳」輸入收支，或直接在右側對話視窗告訴我你的花費！</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Budget Edit Modal -->
+  <div id="budgetModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-slate-900">設定每月支出預算</h3>
+        <button type="button" id="closeBudgetModalBtn" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <form id="budgetForm" class="space-y-4">
+        <div>
+          <label for="budgetInput" class="block text-xs font-semibold text-slate-600 mb-1">每月預算上限 (NT$)</label>
+          <input id="budgetInput" type="number" min="0" step="500" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-base font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+          <p class="text-xs text-slate-500 mt-1.5">設定為 0 代表不限制每月預算。</p>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="cancelBudgetBtn" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700">取消</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-xs font-semibold text-white">儲存設定</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Chat Sync & Export/Import Modal -->
+  <div id="chatSyncModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">與 AI 對話助理同步 & 匯出帳本</h3>
+          <p class="text-xs text-slate-500">一鍵複製摘要貼回對話視窗，或匯出 CSV 試算表</p>
+        </div>
+        <button type="button" id="closeChatSyncModalBtn" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label for="chatSummaryTextarea" class="text-xs font-semibold text-slate-700">對話同步摘要（可直接複製貼給 AI 助理分析）</label>
+          <button type="button" id="copySummaryBtn" class="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1">
+            複製摘要文字
+          </button>
+        </div>
+        <textarea id="chatSummaryTextarea" rows="7" readonly class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700 focus:outline-none"></textarea>
+      </div>
+
+      <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <button type="button" id="exportCsvBtn" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
+            下載 CSV 報表
+          </button>
+          <button type="button" id="exportJsonBtn" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+            匯出 JSON 備份
+          </button>
+          <label class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer">
+            匯入 JSON
+            <input id="importJsonInput" type="file" accept=".json" class="hidden" />
+          </label>
+        </div>
+        <button type="button" id="doneChatSyncBtn" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold">
+          完成
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Apps Script Cloud Database Modal -->
+  <div id="gasConfigModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-200 space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between shrink-0">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            Google 試算表後端資料庫設定 (Google Apps Script)
+            <span id="gasModalBadge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">尚未連線</span>
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">將你的 Google 試算表變成此記帳工具的即時雲端資料庫，支援跨裝置自動讀寫</p>
+        </div>
+        <button type="button" id="closeGasModalBtn" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Tabs -->
+      <div class="flex border-b border-slate-200 text-xs font-bold shrink-0">
+        <button type="button" id="gasTabConnectBtn" class="px-4 py-2 border-b-2 border-indigo-600 text-indigo-600">1. 綁定網址與雙向同步</button>
+        <button type="button" id="gasTabCodeBtn" class="px-4 py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800">2. 複製 Code.gs 後端程式碼與教學</button>
+      </div>
+
+      <!-- Tab 1: Connection & Sync Controls -->
+      <div id="gasTabConnectPanel" class="space-y-4 overflow-y-auto custom-scrollbar pr-1">
+        <div class="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3.5 text-xs text-slate-700 space-y-1.5">
+          <div class="font-bold text-indigo-950 flex items-center justify-between">
+            <span>目標雲端帳本：AI 智慧收支記帳本 (2026)</span>
+            <a href="https://docs.google.com/spreadsheets/d/1zsu2Z_fxVNWwAMixApr98tZI83_QBchGtITgt7V8t6I/edit" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline font-semibold">點此開啟試算表 ↗</a>
+          </div>
+          <p class="text-slate-600">請先切換至上方「<strong>2. 複製 Code.gs 後端程式碼與教學</strong>」完成部署，再將取得的「<strong>網頁應用程式網址 (Web App URL)</strong>」貼在下方即可自動連線！</p>
+        </div>
+
+        <form id="gasUrlForm" class="space-y-3">
+          <div>
+            <label for="gasWebAppUrlInput" class="block text-xs font-semibold text-slate-700 mb-1">Google Apps Script 網頁應用程式網址 (Web App URL)</label>
+            <input
+              id="gasWebAppUrlInput"
+              type="url"
+              placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="submit" id="saveAndTestGasBtn" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition shadow-xs">
+              儲存網址並測試連線
+            </button>
+            <button type="button" id="pullFromGasBtn" class="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+              從雲端試算表讀取 (Pull)
+            </button>
+            <button type="button" id="pushToGasBtn" class="px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition">
+              將目前帳本完整寫入雲端 (Push)
+            </button>
+            <button type="button" id="disconnectGasBtn" class="px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 text-xs font-semibold transition ml-auto">
+              清除連線
+            </button>
+          </div>
+        </form>
+
+        <div id="gasSyncLogBox" class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+          <div class="font-semibold text-slate-800">目前同步狀態：</div>
+          <p id="gasSyncLogText">尚未綁定 Google Apps Script 網址，目前使用瀏覽器本機儲存 (LocalStorage)。綁定後每次新增、修改或刪除都會自動同步至 Google 試算表！</p>
+        </div>
+      </div>
+
+      <!-- Tab 2: Code.gs & Step-by-Step Instructions -->
+      <div id="gasTabCodePanel" class="hidden space-y-3 overflow-y-auto custom-scrollbar pr-1">
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs space-y-2 text-slate-700">
+          <div class="font-bold text-slate-900">只要 3 個步驟即可完成設定（約 1 分鐘）：</div>
+          <ol class="list-decimal list-inside space-y-1 text-slate-600">
+            <li>點開你的 <a href="https://docs.google.com/spreadsheets/d/1zsu2Z_fxVNWwAMixApr98tZI83_QBchGtITgt7V8t6I/edit" target="_blank" rel="noopener noreferrer" class="text-teal-600 font-semibold underline">AI 智慧收支記帳本 (2026)</a>，點選上方選單「<strong>擴充功能</strong>」→「<strong>Apps Script</strong>」。</li>
+            <li>清空編輯器原本的內容，點擊下方「<strong>一鍵複製 Code.gs 程式碼</strong>」貼上並按 <kbd class="px-1.5 py-0.5 bg-white border rounded">Ctrl+S</kbd> 儲存。</li>
+            <li>點擊右上角藍色「<strong>部署</strong>」→「<strong>新增部署作業</strong>」→ 左上角齒輪選「<strong>網頁應用程式</strong>」→ 執行身分選「<strong>我</strong>」、誰可以存取選「<strong>所有人 (Anyone)</strong>」→ 按「<strong>部署</strong>」並授權後，複製產生的「<strong>網頁應用程式網址</strong>」貼回第 1 頁籤即可！</li>
+          </ol>
+        </div>
+
+        <div class="space-y-1.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs font-bold text-slate-700">Google Apps Script 程式碼（支援跨裝置登入與 API 同步）</span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="copyGasCodeBtn" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+                一鍵複製 Code.gs 程式碼
+              </button>
+              <button type="button" id="copyFullHtmlBtn" class="hidden px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold transition" title="若想在 Apps Script 新增 Index.html 實現 Google 帳號專屬登入，可點此複製完整網頁碼">
+                2. 複製前端 Index.html（選用）
+              </button>
+            </div>
+          </div>
+          <textarea id="gasCodeTextarea" rows="10" readonly class="w-full p-3 rounded-xl bg-slate-900 text-emerald-300 font-mono text-[11px] leading-relaxed focus:outline-none custom-scrollbar"></textarea>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-slate-100 flex justify-end shrink-0">
+        <button type="button" id="doneGasModalBtn" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold">
+          關閉視窗
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 pointer-events-none flex flex-col gap-2"></div>
+
+  <script>
+    // --- Categories & Metadata ---
+    const CATEGORIES = {
+      expense: [
+        { id: '餐飲食品', label: '餐飲食品', color: '#f43f5e', keywords: ['餐', '飯', '麵', '便當', '早', '午', '晚', '宵夜', '吃', '喝', '咖啡', '星巴克', '飲料', '手搖', '火鍋', '燒肉', '甜點', '麵包', '蛋餅', '水果', '超商', '7-11', '全家', '麥當勞', '肯德基'] },
+        { id: '交通通勤', label: '交通通勤', color: '#f59e0b', keywords: ['捷運', '公車', '高鐵', '台鐵', '火車', '計程車', 'Uber', '加油', '停車', '悠遊卡', 'TPASS', '月票', '通勤', '機票'] },
+        { id: '日常購物', label: '日常購物', color: '#3b82f6', keywords: ['全聯', '家樂福', '好市多', 'Costco', '日用品', '衛生紙', '衣服', '鞋', '網購', '蝦皮', 'momo', 'PChome', '買', '百貨', '藥妝', '屈臣氏', '寶雅'] },
+        { id: '居住帳單', label: '居住帳單', color: '#8b5cf6', keywords: ['房租', '水費', '電費', '瓦斯', '網路', '電話費', '電信', '管理費', '房貸', '稅', '保險'] },
+        { id: '休閒娛樂', label: '休閒娛樂', color: '#ec4899', keywords: ['電影', 'Netflix', 'Spotify', '遊戲', 'Steam', '唱歌', 'KTV', '旅遊', '住宿', '飯店', '門票', '展覽', '聚餐', '運動', '健身'] },
+        { id: '醫療保健', label: '醫療保健', color: '#10b981', keywords: ['診所', '醫院', '看病', '掛號', '牙醫', '藥', '保健', '維他命', '健檢'] },
+        { id: '學習投資', label: '學習投資', color: '#06b6d4', keywords: ['書', '課程', '進修', '學費', '講座', '訂閱', 'ChatGPT', '工具', '軟體'] },
+        { id: '其他支出', label: '其他支出', color: '#64748b', keywords: ['紅包', '禮金', '禮物', '捐款', '手續費', '雜支'] }
+      ],
+      income: [
+        { id: '薪資收入', label: '薪資收入', color: '#10b981', keywords: ['薪資', '薪水', '月薪', '底薪', '發薪'] },
+        { id: '獎金副業', label: '獎金副業', color: '#059669', keywords: ['獎金', '年終', '績效', '稿費', '接案', '外快', '副業', '兼職', '加班費'] },
+        { id: '投資理財', label: '投資理財', color: '#0d9488', keywords: ['股息', '股利', '配息', '利息', '股票', 'ETF', '獲利'] },
+        { id: '其他收入', label: '其他收入', color: '#14b8a6', keywords: ['退稅', '退款', '回饋', '中獎', '發票', '零用錢', '收入', '入帳'] }
+      ]
+    };
+
+    const STORAGE_KEY_TX = 'ai_ledger_transactions_v1';
+    const STORAGE_KEY_BUDGET = 'ai_ledger_budget_v1';
+    const STORAGE_KEY_GAS_URL = 'ai_ledger_gas_webapp_url_v1';
+    const TODAY_STR = '2026-10-20';
+    let gasWebAppUrl = 'https://script.google.com/macros/s/AKfycbwU0-6SLpDA2hmbXR5BqXb8bONL7fyPFCVQ9pHTz6Ap2utSFdcjAV0duCH1QDLz3p5k/exec';
+    let isSyncingGas = false;
+
+    const GAS_CODE_TEMPLATE = `var SPREADSHEET_ID = '1zsu2Z_fxVNWwAMixApr98tZI83_QBchGtITgt7V8t6I';
+var SHEET_NAME = '收支明細';
+
+function getTargetSpreadsheet() {
+  try {
+    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (e) {
+    return SpreadsheetApp.getActiveSpreadsheet();
+  }
+}
+
+function ensureSheetStructure() {
+  var ss = getTargetSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(['日期', '收支類型', '分類', '品項說明', '金額 (NT$)', '支付方式', '紀錄ID']);
+  } else if (!sheet.getRange(1, 7).getValue()) {
+    sheet.getRange(1, 7).setValue('紀錄ID');
+  }
+  Logger.log('雲端記帳本連線成功：' + sheet.getName());
+  return { ss: ss, sheet: sheet };
+}
+
+function readAllFromSheet() {
+  var info = ensureSheetStructure();
+  var ss = info.ss;
+  var sheet = info.sheet;
+  var props = PropertiesService.getScriptProperties();
+  var savedBudget = Number(props.getProperty('monthlyBudget') || 25000);
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return { status: 'ok', monthlyBudget: savedBudget, transactions: [] };
+  }
+  var values = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+  var transactions = [];
+  var tz = ss.getSpreadsheetTimeZone() || 'Asia/Taipei';
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    if (!row[0] && !row[4] && !row[3]) continue;
+    var dateStr = (row[0] instanceof Date)
+      ? Utilities.formatDate(row[0], tz, 'yyyy-MM-dd')
+      : String(row[0]).trim().slice(0, 10);
+    transactions.push({
+      id: row[6] ? String(row[6]) : ('row_' + (i + 2)),
+      date: dateStr,
+      type: String(row[1]).trim() === '收入' ? 'income' : 'expense',
+      category: String(row[2] || '其他支出'),
+      note: String(row[3] || row[2] || ''),
+      amount: Number(row[4] || 0),
+      payment: String(row[5] || '現金')
+    });
+  }
+  return { status: 'ok', monthlyBudget: savedBudget, transactions: transactions };
+}
+
+function writeAllToSheet(transactions, monthlyBudget) {
+  if (!Array.isArray(transactions)) {
+    return readAllFromSheet();
+  }
+  var info = ensureSheetStructure();
+  var sheet = info.sheet;
+  if (monthlyBudget !== undefined) {
+    PropertiesService.getScriptProperties().setProperty('monthlyBudget', String(monthlyBudget));
+  }
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    sheet.getRange(2, 1, lastRow - 1, 7).clearContent();
+  }
+  if (transactions.length > 0) {
+    var rows = [];
+    for (var i = 0; i < transactions.length; i++) {
+      var t = transactions[i];
+      rows.push([
+        t.date || '',
+        t.type === 'income' ? '收入' : '支出',
+        t.category || '其他支出',
+        t.note || '',
+        Number(t.amount || 0),
+        t.payment || '現金',
+        t.id || ('tx_' + Date.now() + '_' + i)
+      ]);
+    }
+    sheet.getRange(2, 1, rows.length, 7).setValues(rows);
+  }
+  return readAllFromSheet();
+}
+
+function doGet(e) {
+  var result = readAllFromSheet();
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    var contents = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
+    var payload = JSON.parse(contents);
+    var result = writeAllToSheet(payload.transactions || [], payload.monthlyBudget);
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'error', message: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
+    function buildAllInOneGasCode() {
+      return GAS_CODE_TEMPLATE;
+    }
+
+    // --- State ---
+    let transactions = [];
+    let monthlyBudget = 25000;
+    let currentMonthFilter = '2026-10'; // or 'all'
+    let activeChartTab = 'category';
+    let confirmClearPending = false;
+
+    let categoryChartInstance = null;
+    let trendChartInstance = null;
+
+    const IS_GAS_HOSTED = (typeof google !== 'undefined' && google.script && google.script.run);
+    const DEFAULT_GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwU0-6SLpDA2hmbXR5BqXb8bONL7fyPFCVQ9pHTz6Ap2utSFdcjAV0duCH1QDLz3p5k/exec';
+
+    // --- Safe Storage (LocalStorage + window.name fallback for sandboxed preview) ---
+    function readWindowNameCache() {
+      try {
+        if (window.name && window.name.startsWith('AI_LEDGER_CACHE:')) {
+          return JSON.parse(window.name.slice('AI_LEDGER_CACHE:'.length));
+        }
+      } catch (e) {}
+      return {};
+    }
+
+    function writeWindowNameCache(dataObj) {
+      try {
+        window.name = 'AI_LEDGER_CACHE:' + JSON.stringify(dataObj);
+      } catch (e) {}
+    }
+
+    function loadState() {
+      const wn = readWindowNameCache();
+      try {
+        const savedTx = localStorage.getItem(STORAGE_KEY_TX);
+        if (savedTx) {
+          transactions = JSON.parse(savedTx);
+        } else if (Array.isArray(wn.transactions)) {
+          transactions = wn.transactions;
+        }
+      } catch (e) {
+        if (Array.isArray(wn.transactions)) transactions = wn.transactions;
+      }
+      try {
+        const savedBudget = localStorage.getItem(STORAGE_KEY_BUDGET);
+        if (savedBudget !== null) {
+          monthlyBudget = Number(savedBudget) || 25000;
+        } else if (wn.monthlyBudget !== undefined) {
+          monthlyBudget = Number(wn.monthlyBudget) || 25000;
+        }
+      } catch (e) {
+        if (wn.monthlyBudget !== undefined) monthlyBudget = Number(wn.monthlyBudget) || 25000;
+      }
+      try {
+        const savedGasUrl = localStorage.getItem(STORAGE_KEY_GAS_URL);
+        if (savedGasUrl) {
+          gasWebAppUrl = savedGasUrl.trim();
+        } else if (wn.gasWebAppUrl) {
+          gasWebAppUrl = String(wn.gasWebAppUrl).trim();
+        } else if (DEFAULT_GAS_WEBAPP_URL) {
+          gasWebAppUrl = DEFAULT_GAS_WEBAPP_URL;
+        }
+      } catch (e) {
+        gasWebAppUrl = String(wn.gasWebAppUrl || DEFAULT_GAS_WEBAPP_URL || '').trim();
+      }
+    }
+
+    function saveState(skipCloudSync = false) {
+      writeWindowNameCache({ transactions, monthlyBudget, gasWebAppUrl });
+      try {
+        localStorage.setItem(STORAGE_KEY_TX, JSON.stringify(transactions));
+        localStorage.setItem(STORAGE_KEY_BUDGET, String(monthlyBudget));
+        if (gasWebAppUrl) {
+          localStorage.setItem(STORAGE_KEY_GAS_URL, gasWebAppUrl);
+        } else {
+          localStorage.removeItem(STORAGE_KEY_GAS_URL);
+        }
+      } catch (e) {
+        // Ignore storage errors in sandboxed iframe
+      }
+      updateGasStatusUI();
+      if (!skipCloudSync && (gasWebAppUrl || IS_GAS_HOSTED)) {
+        pushStateToGasCloud(true);
+      }
+    }
+
+    function updateGasStatusUI(statusState = null, customMsg = null) {
+      const dot = document.getElementById('gasStatusDot');
+      const text = document.getElementById('gasStatusText');
+      const badge = document.getElementById('gasModalBadge');
+      const logText = document.getElementById('gasSyncLogText');
+      if (!dot || !text || !badge) return;
+
+      if (!gasWebAppUrl && !IS_GAS_HOSTED) {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        text.textContent = '連結雲端資料庫 (GAS)';
+        badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200';
+        badge.textContent = '尚未連線';
+        if (logText && !customMsg) {
+          logText.textContent = '尚未綁定 Google Apps Script 網址，目前使用瀏覽器暫存。綁定後每次新增、修改或刪除都會自動同步至 Google 試算表！';
+        }
+        return;
+      }
+
+      if (statusState === 'syncing') {
+        dot.className = 'w-2 h-2 rounded-full bg-indigo-500 animate-ping';
+        text.textContent = '雲端同步中...';
+        badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200';
+        badge.textContent = '同步中...';
+      } else if (statusState === 'error') {
+        dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+        text.textContent = '雲端連線異常';
+        badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200';
+        badge.textContent = '連線失敗';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+        text.textContent = '雲端資料庫已連線';
+        badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
+        badge.textContent = '已連線自動同步';
+      }
+
+      if (logText && customMsg) {
+        logText.textContent = customMsg;
+      }
+    }
+
+    async function pushStateToGasCloud(silent = false) {
+      if (IS_GAS_HOSTED) {
+        updateGasStatusUI('syncing', '正在透過 Google 帳號安全寫入雲端試算表...');
+        google.script.run
+          .withSuccessHandler(data => {
+            const nowStr = new Date().toLocaleTimeString('zh-TW');
+            updateGasStatusUI('ok', `最後雲端寫入成功時間：${nowStr}（共 ${transactions.length} 筆紀錄已同步至試算表）`);
+            if (!silent) showToast(`已同步 ${transactions.length} 筆紀錄至雲端試算表！`);
+          })
+          .withFailureHandler(err => {
+            updateGasStatusUI('error', `雲端寫入失敗：${err.message || err}`);
+            if (!silent) showToast('雲端寫入失敗', 'error');
+          })
+          .writeAllToSheet(transactions, monthlyBudget);
+        return;
+      }
+      if (!gasWebAppUrl) return;
+      updateGasStatusUI('syncing', '正在將收支資料寫入 Google 雲端試算表...');
+      try {
+        const res = await fetch(gasWebAppUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'syncAll',
+            monthlyBudget: monthlyBudget,
+            transactions: transactions
+          })
+        });
+        const data = await res.json();
+        if (data && data.status === 'ok') {
+          const nowStr = new Date().toLocaleTimeString('zh-TW');
+          updateGasStatusUI('ok', `最後雲端寫入成功時間：${nowStr}（共 ${transactions.length} 筆紀錄已同步至 Google 試算表）`);
+          if (!silent) showToast(`已成功將 ${transactions.length} 筆紀錄寫入 Google 試算表！`);
+        } else {
+          throw new Error((data && data.message) || '回應格式不符');
+        }
+      } catch (err) {
+        updateGasStatusUI('error', `雲端同步失敗：請確認 Apps Script 部署權限已設為「所有人 (Anyone)」且網址以 /exec 結尾。（詳細：${err.message}）`);
+        if (!silent) showToast('雲端試算表連線失敗，請檢查網址與權限設定', 'error');
+      }
+    }
+
+    async function pullStateFromGasCloud(silent = false) {
+      if (IS_GAS_HOSTED) {
+        updateGasStatusUI('syncing', '正在透過 Google 帳號從雲端試算表載入資料...');
+        google.script.run
+          .withSuccessHandler(data => {
+            if (data && data.status === 'ok') {
+              if (Array.isArray(data.transactions)) transactions = data.transactions;
+              if (data.monthlyBudget !== undefined) monthlyBudget = Number(data.monthlyBudget) || 25000;
+              renderAll(true);
+              const nowStr = new Date().toLocaleTimeString('zh-TW');
+              updateGasStatusUI('ok', `最後雲端讀取成功時間：${nowStr}（共 ${transactions.length} 筆紀錄）`);
+              if (!silent) showToast(`已從雲端載入 ${transactions.length} 筆紀錄！`);
+            }
+          })
+          .withFailureHandler(err => {
+            updateGasStatusUI('error', `雲端讀取失敗：${err.message || err}`);
+          })
+          .readAllFromSheet();
+        return;
+      }
+      if (!gasWebAppUrl) {
+        if (!silent) showToast('請先輸入並儲存 Google Apps Script 網址', 'error');
+        return;
+      }
+      updateGasStatusUI('syncing', '正在從 Google 雲端試算表讀取最新帳務資料...');
+      try {
+        const sep = gasWebAppUrl.includes('?') ? '&' : '?';
+        const res = await fetch(gasWebAppUrl + sep + 'api=1&t=' + Date.now(), {
+          method: 'GET',
+          redirect: 'follow'
+        });
+        const data = await res.json();
+        if (data && data.status === 'ok') {
+          if (Array.isArray(data.transactions)) {
+            transactions = data.transactions;
+          }
+          if (data.monthlyBudget !== undefined) {
+            monthlyBudget = Number(data.monthlyBudget) || 25000;
+          }
+          renderAll(true);
+          const nowStr = new Date().toLocaleTimeString('zh-TW');
+          updateGasStatusUI('ok', `最後雲端讀取成功時間：${nowStr}（已從 Google 試算表載入 ${transactions.length} 筆紀錄）`);
+          if (!silent) showToast(`已從 Google 試算表同步載入 ${transactions.length} 筆紀錄！`);
+        } else {
+          throw new Error((data && data.message) || '回應格式錯誤');
+        }
+      } catch (err) {
+        updateGasStatusUI('error', `讀取失敗：請確認 Apps Script 部署權限已設為「所有人 (Anyone)」且網址正確。（詳細：${err.message}）`);
+        if (!silent) showToast('無法從雲端試算表讀取資料，請檢查設定', 'error');
+      }
+    }
+
+    // --- Toast Notification ---
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bgClass = type === 'error' ? 'bg-rose-600' : type === 'info' ? 'bg-slate-800' : 'bg-teal-600';
+      toast.className = `${bgClass} text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold flex items-center gap-2 transition-all duration-300 pointer-events-auto`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2600);
+    }
+
+    // --- Format Helpers ---
+    function formatCurrency(num) {
+      const n = Math.round(Number(num) || 0);
+      return 'NT$ ' + n.toLocaleString('zh-TW');
+    }
+
+    function getCategoryMeta(type, catId) {
+      const list = CATEGORIES[type] || CATEGORIES.expense;
+      return list.find(c => c.id === catId) || list[list.length - 1];
+    }
+
+    // --- Natural Language Smart Parser ---
+    function parseNaturalLanguageEntry(rawText) {
+      const segments = rawText
+        .split(/[,，、;\n]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const parsedItems = [];
+
+      for (const seg of segments) {
+        let text = seg;
+        let dateStr = TODAY_STR;
+
+        // Detect optional date prefix like 10/18 or 2026-10-18 or 10月18日
+        const fullDateMatch = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
+        const shortDateMatch = text.match(/(?:^|\s)(\d{1,2})[/.月](\d{1,2})日?(?=\s|$|[^\d])/);
+
+        if (fullDateMatch) {
+          const y = fullDateMatch[1];
+          const m = String(fullDateMatch[2]).padStart(2, '0');
+          const d = String(fullDateMatch[3]).padStart(2, '0');
+          dateStr = `${y}-${m}-${d}`;
+          text = text.replace(fullDateMatch[0], ' ').trim();
+        } else if (shortDateMatch) {
+          const m = String(shortDateMatch[1]).padStart(2, '0');
+          const d = String(shortDateMatch[2]).padStart(2, '0');
+          dateStr = `2026-${m}-${d}`;
+          text = text.replace(shortDateMatch[0], ' ').trim();
+        }
+
+        if (text.includes('昨天') || text.includes('昨日')) {
+          dateStr = '2026-10-18';
+          text = text.replace(/昨天|昨日/g, ' ').trim();
+        } else if (text.includes('前天')) {
+          dateStr = '2026-10-17';
+          text = text.replace(/前天/g, ' ').trim();
+        }
+
+        // Extract amount (last number or number before 元/塊/$)
+        const amountMatches = [...text.matchAll(/(?:\$|NT\$)?\s*(\d+(?:\.\d+)?)\s*(?:元|塊)?/gi)];
+        if (amountMatches.length === 0) continue;
+
+        const chosenMatch = amountMatches[amountMatches.length - 1];
+        const amount = Math.round( parseFloat(chosenMatch[1]) );
+        if (!amount || amount <= 0) continue;
+
+        // Remove the matched amount token from description
+        const beforeAmt = text.slice(0, chosenMatch.index);
+        const afterAmt = text.slice(chosenMatch.index + chosenMatch[0].length);
+        let desc = (beforeAmt + ' ' + afterAmt).replace(/\s+/g, ' ').trim();
+
+        // Detect payment method
+        let payment = '現金';
+        if (/信用卡|刷卡/i.test(desc)) {
+          payment = '信用卡';
+          desc = desc.replace(/信用卡|刷卡/gi, '').trim();
+        } else if (/line\s*pay|街口|apple\s*pay|行動支付/i.test(desc)) {
+          payment = '行動支付';
+          desc = desc.replace(/line\s*pay|街口|apple\s*pay|行動支付/gi, '').trim();
+        } else if (/悠遊卡|一卡通/i.test(desc)) {
+          payment = '悠遊卡/一卡通';
+          desc = desc.replace(/悠遊卡|一卡通/gi, '').trim();
+        } else if (/轉帳|匯款|帳戶/i.test(desc)) {
+          payment = '銀行轉帳';
+          desc = desc.replace(/轉帳|匯款|帳戶/gi, '').trim();
+        }
+
+        // Detect income vs expense & category
+        let entryType = 'expense';
+        let matchedCat = '其他支出';
+
+        for (const cat of CATEGORIES.income) {
+          if (cat.keywords.some(k => desc.toLowerCase().includes(k.toLowerCase()))) {
+            entryType = 'income';
+            matchedCat = cat.id;
+            break;
+          }
+        }
+
+        if (entryType === 'expense') {
+          if (/^\+|收入|入帳/.test(desc)) {
+            entryType = 'income';
+            matchedCat = '其他收入';
+            desc = desc.replace(/^\+|收入|入帳/g, '').trim();
+          } else {
+            for (const cat of CATEGORIES.expense) {
+              if (cat.keywords.some(k => desc.toLowerCase().includes(k.toLowerCase()))) {
+                matchedCat = cat.id;
+                break;
+              }
+            }
+          }
+        }
+
+        parsedItems.push({
+          id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          type: entryType,
+          date: dateStr,
+          amount,
+          category: matchedCat,
+          payment,
+          note: desc || matchedCat
+        });
+      }
+
+      return parsedItems;
+    }
+
+    // --- Populate Category Dropdowns ---
+    function populateEntryCategories(type) {
+      const select = document.getElementById('entryCategory');
+      select.innerHTML = '';
+      const list = CATEGORIES[type] || CATEGORIES.expense;
+      list.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.label;
+        select.appendChild(opt);
+      });
+    }
+
+    function populateFilterCategories() {
+      const select = document.getElementById('filterCategory');
+      const currentVal = select.value;
+      select.innerHTML = '<option value="all">所有分類</option>';
+      const allCats = [...CATEGORIES.expense, ...CATEGORIES.income];
+      allCats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.label;
+        select.appendChild(opt);
+      });
+      if ([...select.options].some(o => o.value === currentVal)) {
+        select.value = currentVal;
+      }
+    }
+
+    // --- Set Entry Form Mode ---
+    function setEntryType(type) {
+      document.getElementById('entryType').value = type;
+      const expBtn = document.getElementById('typeExpenseBtn');
+      const incBtn = document.getElementById('typeIncomeBtn');
+      if (type === 'expense') {
+        expBtn.className = 'px-3.5 py-1 rounded-md text-xs font-bold bg-rose-500 text-white shadow-sm transition';
+        incBtn.className = 'px-3.5 py-1 rounded-md text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+      } else {
+        incBtn.className = 'px-3.5 py-1 rounded-md text-xs font-bold bg-emerald-600 text-white shadow-sm transition';
+        expBtn.className = 'px-3.5 py-1 rounded-md text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+      }
+      populateEntryCategories(type);
+    }
+
+    // --- Filter Transactions ---
+    function getPeriodTransactions() {
+      if (currentMonthFilter === 'all') {
+        return [...transactions];
+      }
+      return transactions.filter(t => t.date && t.date.startsWith(currentMonthFilter));
+    }
+
+    function getFilteredLedgerTransactions() {
+      const periodTx = getPeriodTransactions();
+      const typeFilter = document.getElementById('filterType').value;
+      const catFilter = document.getElementById('filterCategory').value;
+      const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
+
+      return periodTx
+        .filter(t => {
+          if (typeFilter !== 'all' && t.type !== typeFilter) return false;
+          if (catFilter !== 'all' && t.category !== catFilter) return false;
+          if (keyword) {
+            const hay = `${t.note} ${t.category} ${t.payment} ${t.date}`.toLowerCase();
+            if (!hay.includes(keyword)) return false;
+          }
+          return true;
+        })
+        .sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.id.localeCompare(a.id));
+    }
+
+    // --- Render KPI & Budget ---
+    function renderKPIs() {
+      const periodTx = getPeriodTransactions();
+      const expenses = periodTx.filter(t => t.type === 'expense');
+      const incomes = periodTx.filter(t => t.type === 'income');
+
+      const totalExp = expenses.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const totalInc = incomes.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const balance = totalInc - totalExp;
+
+      document.getElementById('kpiExpense').textContent = formatCurrency(totalExp);
+      document.getElementById('kpiExpenseCount').textContent = `共 ${expenses.length} 筆支出紀錄`;
+
+      document.getElementById('kpiIncome').textContent = formatCurrency(totalInc);
+      document.getElementById('kpiIncomeCount').textContent = `共 ${incomes.length} 筆收入紀錄`;
+
+      const balEl = document.getElementById('kpiBalance');
+      balEl.textContent = (balance >= 0 ? '' : '- ') + formatCurrency(Math.abs(balance));
+      balEl.className = `text-2xl font-bold ${balance >= 0 ? 'text-slate-900' : 'text-rose-600'}`;
+
+      const savingsEl = document.getElementById('kpiSavingsRate');
+      if (totalInc > 0) {
+        const rate = Math.round((balance / totalInc) * 100);
+        savingsEl.textContent = `期間儲蓄率：${rate}%`;
+      } else {
+        savingsEl.textContent = '期間儲蓄率：--';
+      }
+
+      // Budget calculation
+      const remainEl = document.getElementById('kpiBudgetRemain');
+      const pctEl = document.getElementById('kpiBudgetPct');
+      const barEl = document.getElementById('budgetProgressBar');
+      const subEl = document.getElementById('kpiBudgetSub');
+
+      if (monthlyBudget > 0) {
+        const remain = monthlyBudget - totalExp;
+        const pct = Math.min(100, Math.round((totalExp / monthlyBudget) * 100));
+        const rawPct = Math.round((totalExp / monthlyBudget) * 100);
+
+        if (remain >= 0) {
+          remainEl.textContent = `剩餘 ${formatCurrency(remain)}`;
+          remainEl.className = 'text-lg font-bold text-slate-900';
+        } else {
+          remainEl.textContent = `超支 ${formatCurrency(Math.abs(remain))}`;
+          remainEl.className = 'text-lg font-bold text-rose-600';
+        }
+
+        pctEl.textContent = `${rawPct}%`;
+        barEl.style.width = `${pct}%`;
+        if (rawPct >= 100) {
+          barEl.className = 'h-full bg-rose-500 transition-all duration-300 rounded-full';
+        } else if (rawPct >= 80) {
+          barEl.className = 'h-full bg-amber-500 transition-all duration-300 rounded-full';
+        } else {
+          barEl.className = 'h-full bg-teal-500 transition-all duration-300 rounded-full';
+        }
+        subEl.textContent = `每月預算上限 ${formatCurrency(monthlyBudget)}`;
+      } else {
+        remainEl.textContent = '未設定上限';
+        remainEl.className = 'text-lg font-bold text-slate-500';
+        pctEl.textContent = '--';
+        barEl.style.width = '0%';
+        subEl.textContent = '點選右上角「設定預算」開啟控管';
+      }
+    }
+
+    // --- Render Charts ---
+    function renderCharts() {
+      const periodTx = getPeriodTransactions();
+      const expenses = periodTx.filter(t => t.type === 'expense');
+      const totalExp = expenses.reduce((s, t) => s + Number(t.amount || 0), 0);
+
+      // 1. Category Doughnut & Breakdown List
+      const emptyEl = document.getElementById('categoryEmptyState');
+      const breakdownEl = document.getElementById('categoryBreakdownList');
+      breakdownEl.innerHTML = '';
+
+      if (expenses.length === 0) {
+        emptyEl.classList.remove('hidden');
+        if (categoryChartInstance) {
+          categoryChartInstance.destroy();
+          categoryChartInstance = null;
+        }
+      } else {
+        emptyEl.classList.add('hidden');
+        const byCat = {};
+        expenses.forEach(t => {
+          byCat[t.category] = (byCat[t.category] || 0) + Number(t.amount || 0);
+        });
+
+        const sortedCats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+        const labels = sortedCats.map(([c]) => c);
+        const dataVals = sortedCats.map(([, v]) => v);
+        const colors = sortedCats.map(([c]) => getCategoryMeta('expense', c).color);
+
+        const ctx = document.getElementById('categoryChartCanvas').getContext('2d');
+        if (categoryChartInstance) {
+          categoryChartInstance.destroy();
+        }
+        if (typeof Chart !== 'undefined') {
+          categoryChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels,
+              datasets: [{
+                data: dataVals,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#ffffff'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '64%',
+              plugins: {
+                legend: {
+                  position: 'right',
+                  labels: {
+                    boxWidth: 10,
+                    font: { size: 11, family: 'Inter, Noto Sans TC, sans-serif' }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // Populate category breakdown bars
+        sortedCats.forEach(([catName, val]) => {
+          const pct = totalExp > 0 ? Math.round((val / totalExp) * 100) : 0;
+          const meta = getCategoryMeta('expense', catName);
+          const row = document.createElement('div');
+          row.className = 'text-xs space-y-1';
+          row.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-700 flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${meta.color}"></span>
+                ${catName}
+              </span>
+              <span class="font-bold text-slate-900">${formatCurrency(val)} <span class="text-slate-400 font-normal">(${pct}%)</span></span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full rounded-full" style="width: ${pct}%; background-color: ${meta.color}"></div>
+            </div>
+          `;
+          breakdownEl.appendChild(row);
+        });
+      }
+
+      // 2. Daily Trend Bar Chart
+      const byDate = {};
+      periodTx.forEach(t => {
+        const d = t.date || TODAY_STR;
+        if (!byDate[d]) byDate[d] = { expense: 0, income: 0 };
+        byDate[d][t.type] += Number(t.amount || 0);
+      });
+
+      const sortedDates = Object.keys(byDate).sort();
+      const dateLabels = sortedDates.map(d => d.slice(5));
+      const expSeries = sortedDates.map(d => byDate[d].expense);
+      const incSeries = sortedDates.map(d => byDate[d].income);
+
+      const trendCtx = document.getElementById('trendChartCanvas').getContext('2d');
+      if (trendChartInstance) {
+        trendChartInstance.destroy();
+      }
+      if (typeof Chart !== 'undefined') {
+        trendChartInstance = new Chart(trendCtx, {
+          type: 'bar',
+          data: {
+            labels: dateLabels.length ? dateLabels : ['尚無資料'],
+            datasets: [
+              {
+                label: '支出',
+                data: expSeries.length ? expSeries : [0],
+                backgroundColor: '#f43f5e',
+                borderRadius: 6
+              },
+              {
+                label: '收入',
+                data: incSeries.length ? incSeries : [0],
+                backgroundColor: '#10b981',
+                borderRadius: 6
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { font: { size: 10 } }
+              },
+              x: {
+                ticks: { font: { size: 10 } }
+              }
+            },
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: { boxWidth: 10, font: { size: 11 } }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // --- Render Transaction List ---
+    function renderLedgerList() {
+      const subtitleEl = document.getElementById('ledgerSubtitle');
+      if (currentMonthFilter === 'all') {
+        subtitleEl.textContent = `顯示全部期間的交易紀錄（共 ${transactions.length} 筆）`;
+      } else {
+        const [y, m] = currentMonthFilter.split('-');
+        subtitleEl.textContent = `顯示 ${y}年${Number(m)}月 的收支明細`;
+      }
+
+      const listEl = document.getElementById('transactionListContainer');
+      const emptyEl = document.getElementById('ledgerEmptyState');
+      const filtered = getFilteredLedgerTransactions();
+
+      listEl.innerHTML = '';
+      if (filtered.length === 0) {
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+      emptyEl.classList.add('hidden');
+
+      filtered.forEach(tx => {
+        const meta = getCategoryMeta(tx.type, tx.category);
+        const isExp = tx.type === 'expense';
+        const item = document.createElement('div');
+        item.className = 'py-3.5 px-2 hover:bg-slate-50 rounded-xl transition flex items-center justify-between gap-3 group';
+
+        item.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs" style="background-color: ${meta.color}">
+              ${tx.category.slice(0, 2)}
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="text-sm font-bold text-slate-900 truncate">${escapeHtml(tx.note || tx.category)}</p>
+                <span class="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 shrink-0">${escapeHtml(tx.category)}</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                <span>${escapeHtml(tx.date)}</span>
+                <span>•</span>
+                <span>${escapeHtml(tx.payment || '現金')}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 shrink-0">
+            <span class="text-sm sm:text-base font-bold ${isExp ? 'text-rose-600' : 'text-emerald-600'}">
+              ${isExp ? '-' : '+'} ${formatCurrency(tx.amount)}
+            </span>
+            <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+              <button type="button" data-action="edit" data-id="${tx.id}" class="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition" title="編輯">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+              <button type="button" data-action="delete" data-id="${tx.id}" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition" title="刪除">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // --- Full Re-render ---
+    function renderAll(skipCloudSync = false) {
+      saveState(skipCloudSync);
+      renderKPIs();
+      renderCharts();
+      renderLedgerList();
+    }
+
+    // --- Generate Chat Sync Summary Text ---
+    function generateChatSummaryText() {
+      const periodTx = getPeriodTransactions();
+      const expenses = periodTx.filter(t => t.type === 'expense');
+      const incomes = periodTx.filter(t => t.type === 'income');
+      const totalExp = expenses.reduce((s, t) => s + Number(t.amount || 0), 0);
+      const totalInc = incomes.reduce((s, t) => s + Number(t.amount || 0), 0);
+      const balance = totalInc - totalExp;
+
+      const periodTitle = currentMonthFilter === 'all' ? '全部期間' : currentMonthFilter;
+      const lines = [
+        `【${periodTitle} 帳務同步摘要】`,
+        `• 總收入：${formatCurrency(totalInc)}（${incomes.length} 筆）`,
+        `• 總支出：${formatCurrency(totalExp)}（${expenses.length} 筆）`,
+        `• 淨結餘：${balance >= 0 ? '' : '-'}${formatCurrency(Math.abs(balance))}`,
+        `• 每月預算上限：${formatCurrency(monthlyBudget)}`,
+        ``,
+        `【近期明細】`
+      ];
+
+      const recent = [...periodTx].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 15);
+      if (recent.length === 0) {
+        lines.push('（尚無收支紀錄）');
+      } else {
+        recent.forEach(t => {
+          const sign = t.type === 'expense' ? '-' : '+';
+          lines.push(`${t.date} | [${t.category}] ${t.note} ${sign}${t.amount}元 (${t.payment})`);
+        });
+      }
+      return lines.join('\n');
+    }
+
+    // --- Sample Demo Data ---
+    function loadSampleData() {
+      transactions = [
+        { id: 'demo_1', type: 'income', date: '2026-10-05', amount: 48000, category: '薪資收入', payment: '銀行轉帳', note: '10月份本薪入帳' },
+        { id: 'demo_2', type: 'expense', date: '2026-10-06', amount: 8500, category: '居住帳單', payment: '銀行轉帳', note: '套房租金分攤與水電' },
+        { id: 'demo_3', type: 'expense', date: '2026-10-10', amount: 1200, category: '交通通勤', payment: '悠遊卡/一卡通', note: 'TPASS 基北北桃通勤月票' },
+        { id: 'demo_4', type: 'expense', date: '2026-10-14', amount: 680, category: '日常購物', payment: '信用卡', note: '全聯採買鮮奶與生活日用品' },
+        { id: 'demo_5', type: 'income', date: '2026-10-16', amount: 3600, category: '獎金副業', payment: '銀行轉帳', note: '專案設計外快稿費' },
+        { id: 'demo_6', type: 'expense', date: '2026-10-18', amount: 420, category: '休閒娛樂', payment: '信用卡', note: '週末電影院門票與爆米花' },
+        { id: 'demo_7', type: 'expense', date: '2026-10-19', amount: 145, category: '餐飲食品', payment: '行動支付', note: '健康舒肥雞胸便當' },
+        { id: 'demo_8', type: 'expense', date: '2026-10-19', amount: 65, category: '餐飲食品', payment: '現金', note: '美式冰咖啡' }
+      ];
+      currentMonthFilter = '2026-10';
+      document.getElementById('monthFilterInput').value = '2026-10';
+      renderAll();
+      showToast('已載入 8 筆範例收支資料！');
+    }
+
+    // --- Event Listeners Setup ---
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      document.getElementById('entryDate').value = TODAY_STR;
+      document.getElementById('gasCodeTextarea').value = GAS_CODE_TEMPLATE;
+      document.getElementById('gasWebAppUrlInput').value = gasWebAppUrl;
+      const bInput = document.getElementById('bannerGasUrlInput');
+      if (bInput && gasWebAppUrl) bInput.value = gasWebAppUrl;
+      populateEntryCategories('expense');
+      populateFilterCategories();
+      renderAll(true);
+      if (IS_GAS_HOSTED || gasWebAppUrl) {
+        pullStateFromGasCloud(true);
+      }
+
+      // Smart Quick Input Form
+      document.getElementById('smartInputForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const input = document.getElementById('smartInputText');
+        const raw = input.value.trim();
+        if (!raw) {
+          showToast('請先輸入收支文字，例如：午餐 120', 'error');
+          return;
+        }
+        const parsed = parseNaturalLanguageEntry(raw);
+        if (parsed.length === 0) {
+          showToast('未能辨識出金額，請包含數字（如：晚餐 180）', 'error');
+          return;
+        }
+        transactions.push(...parsed);
+        input.value = '';
+        renderAll();
+        showToast(`已成功智慧新增 ${parsed.length} 筆收支紀錄！`);
+      });
+
+      // Quick Chips
+      document.querySelectorAll('.quick-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const text = btn.getAttribute('data-quick');
+          const parsed = parseNaturalLanguageEntry(text);
+          if (parsed.length > 0) {
+            transactions.push(...parsed);
+            renderAll();
+            showToast(`已新增：${parsed[0].note} (${formatCurrency(parsed[0].amount)})`);
+          }
+        });
+      });
+
+      // Demo & Clear Buttons
+      document.getElementById('loadDemoBtn').addEventListener('click', loadSampleData);
+
+      const clearBtn = document.getElementById('clearAllBtn');
+      clearBtn.addEventListener('click', () => {
+        if (!confirmClearPending) {
+          confirmClearPending = true;
+          clearBtn.textContent = '再點一次確認清空';
+          setTimeout(() => {
+            confirmClearPending = false;
+            clearBtn.textContent = '清空帳本';
+          }, 3000);
+          return;
+        }
+        transactions = [];
+        confirmClearPending = false;
+        clearBtn.textContent = '清空帳本';
+        renderAll();
+        showToast('已清空所有帳本紀錄', 'info');
+      });
+
+      // Entry Type Toggle
+      document.getElementById('typeExpenseBtn').addEventListener('click', () => setEntryType('expense'));
+      document.getElementById('typeIncomeBtn').addEventListener('click', () => setEntryType('income'));
+
+      // Manual Entry Submit
+      document.getElementById('manualEntryForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const editId = document.getElementById('editTxId').value;
+        const type = document.getElementById('entryType').value;
+        const date = document.getElementById('entryDate').value || TODAY_STR;
+        const amount = Math.round(Number(document.getElementById('entryAmount').value || 0));
+        const category = document.getElementById('entryCategory').value;
+        const payment = document.getElementById('entryPayment').value;
+        const note = document.getElementById('entryNote').value.trim() || category;
+
+        if (amount <= 0) {
+          showToast('請輸入大於 0 的金額', 'error');
+          return;
+        }
+
+        if (editId) {
+          const idx = transactions.findIndex(t => t.id === editId);
+          if (idx !== -1) {
+            transactions[idx] = { ...transactions[idx], type, date, amount, category, payment, note };
+          }
+          resetManualForm();
+          showToast('已更新該筆收支紀錄！');
+        } else {
+          transactions.push({
+            id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+            type,
+            date,
+            amount,
+            category,
+            payment,
+            note
+          });
+          document.getElementById('entryAmount').value = '';
+          document.getElementById('entryNote').value = '';
+          showToast(`已新增${type === 'expense' ? '支出' : '收入'}：${note}`);
+        }
+        renderAll();
+      });
+
+      document.getElementById('cancelEditBtn').addEventListener('click', resetManualForm);
+
+      // Edit & Delete Delegation
+      document.getElementById('transactionListContainer').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+
+        if (action === 'delete') {
+          transactions = transactions.filter(t => t.id !== id);
+          renderAll();
+          showToast('已刪除該筆紀錄', 'info');
+        } else if (action === 'edit') {
+          const tx = transactions.find(t => t.id === id);
+          if (!tx) return;
+          setEntryType(tx.type);
+          document.getElementById('editTxId').value = tx.id;
+          document.getElementById('entryDate').value = tx.date;
+          document.getElementById('entryAmount').value = tx.amount;
+          document.getElementById('entryCategory').value = tx.category;
+          document.getElementById('entryPayment').value = tx.payment || '現金';
+          document.getElementById('entryNote').value = tx.note;
+          document.getElementById('formTitle').textContent = '編輯收支紀錄';
+          document.getElementById('submitEntryBtn').textContent = '更新紀錄';
+          document.getElementById('cancelEditBtn').classList.remove('hidden');
+        }
+      });
+
+      // Month Navigation
+      const monthInput = document.getElementById('monthFilterInput');
+      monthInput.addEventListener('change', () => {
+        if (monthInput.value) {
+          currentMonthFilter = monthInput.value;
+          document.getElementById('allMonthsBtn').className = 'text-xs font-medium px-2.5 py-1 rounded-md text-slate-600 hover:bg-white hover:shadow-sm transition ml-0.5';
+          renderAll();
+        }
+      });
+
+      document.getElementById('prevMonthBtn').addEventListener('click', () => shiftMonth(-1));
+      document.getElementById('nextMonthBtn').addEventListener('click', () => shiftMonth(1));
+      document.getElementById('allMonthsBtn').addEventListener('click', () => {
+        currentMonthFilter = 'all';
+        document.getElementById('allMonthsBtn').className = 'text-xs font-bold px-2.5 py-1 rounded-md bg-teal-600 text-white shadow-sm transition ml-0.5';
+        renderAll();
+      });
+
+      // Filter Controls
+      document.getElementById('filterType').addEventListener('change', renderLedgerList);
+      document.getElementById('filterCategory').addEventListener('change', renderLedgerList);
+      document.getElementById('searchKeyword').addEventListener('input', renderLedgerList);
+
+      // Chart Tabs
+      const tabCat = document.getElementById('chartTabCategory');
+      const tabTrend = document.getElementById('chartTabTrend');
+      tabCat.addEventListener('click', () => {
+        activeChartTab = 'category';
+        tabCat.className = 'px-2.5 py-1 rounded-md font-semibold bg-white shadow-sm text-slate-800';
+        tabTrend.className = 'px-2.5 py-1 rounded-md font-semibold text-slate-600 hover:text-slate-900';
+        document.getElementById('categoryChartContainer').classList.remove('hidden');
+        document.getElementById('trendChartContainer').classList.add('hidden');
+        renderCharts();
+      });
+      tabTrend.addEventListener('click', () => {
+        activeChartTab = 'trend';
+        tabTrend.className = 'px-2.5 py-1 rounded-md font-semibold bg-white shadow-sm text-slate-800';
+        tabCat.className = 'px-2.5 py-1 rounded-md font-semibold text-slate-600 hover:text-slate-900';
+        document.getElementById('trendChartContainer').classList.remove('hidden');
+        document.getElementById('categoryChartContainer').classList.add('hidden');
+        renderCharts();
+      });
+
+      // Budget Modal
+      const budgetModal = document.getElementById('budgetModal');
+      document.getElementById('editBudgetBtn').addEventListener('click', () => {
+        document.getElementById('budgetInput').value = monthlyBudget;
+        budgetModal.classList.remove('hidden');
+        budgetModal.classList.add('flex');
+      });
+      const closeBudget = () => {
+        budgetModal.classList.add('hidden');
+        budgetModal.classList.remove('flex');
+      };
+      document.getElementById('closeBudgetModalBtn').addEventListener('click', closeBudget);
+      document.getElementById('cancelBudgetBtn').addEventListener('click', closeBudget);
+      document.getElementById('budgetForm').addEventListener('submit', e => {
+        e.preventDefault();
+        monthlyBudget = Math.max(0, Math.round(Number(document.getElementById('budgetInput').value || 0)));
+        closeBudget();
+        renderAll();
+        showToast('已更新每月支出預算設定！');
+      });
+
+      // Chat Sync & Export Modal
+      const syncModal = document.getElementById('chatSyncModal');
+      document.getElementById('openChatSyncModalBtn').addEventListener('click', () => {
+        document.getElementById('chatSummaryTextarea').value = generateChatSummaryText();
+        syncModal.classList.remove('hidden');
+        syncModal.classList.add('flex');
+      });
+      const closeSync = () => {
+        syncModal.classList.add('hidden');
+        syncModal.classList.remove('flex');
+      };
+      document.getElementById('closeChatSyncModalBtn').addEventListener('click', closeSync);
+      document.getElementById('doneChatSyncBtn').addEventListener('click', closeSync);
+
+      document.getElementById('copySummaryBtn').addEventListener('click', () => {
+        const textarea = document.getElementById('chatSummaryTextarea');
+        textarea.select();
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textarea.value).then(() => {
+              showToast('已複製帳務摘要！可直接貼到對話視窗');
+            }).catch(() => {
+              document.execCommand('copy');
+              showToast('已複製帳務摘要！可直接貼到對話視窗');
+            });
+          } else {
+            document.execCommand('copy');
+            showToast('已複製帳務摘要！可直接貼到對話視窗');
+          }
+        } catch (err) {
+          document.execCommand('copy');
+          showToast('已複製帳務摘要！');
+        }
+      });
+
+      // CSV Export
+      document.getElementById('exportCsvBtn').addEventListener('click', () => {
+        const headers = ['日期', '收支類型', '分類', '品項說明', '金額(TWD)', '支付方式'];
+        const rows = transactions.map(t => [
+          t.date,
+          t.type === 'expense' ? '支出' : '收入',
+          t.category,
+          `"${String(t.note || '').replace(/"/g, '""')}"`,
+          t.amount,
+          t.payment || '現金'
+        ]);
+        const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `AI記帳報表_${currentMonthFilter}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('已下載 CSV 報表！');
+      });
+
+      // JSON Export & Import
+      document.getElementById('exportJsonBtn').addEventListener('click', () => {
+        const dataStr = JSON.stringify({ monthlyBudget, transactions }, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `AI記帳備份_${TODAY_STR}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('已匯出 JSON 備份檔！');
+      });
+
+      // Top Banner GAS Quick Setup Controls
+      if (IS_GAS_HOSTED) {
+        const bannerEl = document.getElementById('gasQuickSetupBanner');
+        if (bannerEl) bannerEl.classList.add('hidden');
+      }
+      document.getElementById('toggleGasBannerBtn').addEventListener('click', () => {
+        const body = document.getElementById('gasBannerBody');
+        const btn = document.getElementById('toggleGasBannerBtn');
+        const isHidden = body.classList.toggle('hidden');
+        btn.textContent = isHidden ? '展開教學面板' : '展開設定詳情';
+      });
+      // Pre-populate the visible textarea on load so it's ready immediately
+      const bannerCodeBox = document.getElementById('bannerVisibleGasCode');
+      if (bannerCodeBox) {
+        bannerCodeBox.value = buildAllInOneGasCode();
+        bannerCodeBox.addEventListener('click', () => {
+          bannerCodeBox.select();
+          bannerCodeBox.setSelectionRange(0, bannerCodeBox.value.length);
+        });
+      }
+
+      function syncCopyFromTextarea(textareaEl, successMsg) {
+        if (!textareaEl) return;
+        textareaEl.focus();
+        textareaEl.select();
+        textareaEl.setSelectionRange(0, textareaEl.value.length);
+        let copied = false;
+        try {
+          copied = document.execCommand('copy');
+        } catch (e) {
+          copied = false;
+        }
+        if (copied) {
+          showToast(successMsg);
+        } else {
+          showToast('已為你全選上方黑框內的程式碼，請直接按鍵盤 Ctrl+C（或右鍵複製）！', 'info');
+        }
+      }
+
+      document.getElementById('bannerCopyAllInOneGasBtn').addEventListener('click', () => {
+        const fullGasCode = buildAllInOneGasCode();
+        const visibleBox = document.getElementById('bannerVisibleGasCode');
+        const modalBox = document.getElementById('gasCodeTextarea');
+        if (visibleBox) visibleBox.value = fullGasCode;
+        if (modalBox) modalBox.value = fullGasCode;
+        syncCopyFromTextarea(visibleBox, '✅ 已成功複製完整 Apps Script 程式碼！現在可直接去貼上 (Ctrl+V)');
+        const btn = document.getElementById('bannerCopyAllInOneGasBtn');
+        btn.textContent = '✅ 已全選並複製！（若未自動複製請直接按 Ctrl+C）';
+      });
+      document.getElementById('bannerSaveGasUrlBtn').addEventListener('click', async () => {
+        const urlVal = document.getElementById('bannerGasUrlInput').value.trim();
+        if (!urlVal) {
+          showToast('請先貼上部署後取得的 https://script.google.com/.../exec 網址', 'error');
+          return;
+        }
+        gasWebAppUrl = urlVal;
+        document.getElementById('gasWebAppUrlInput').value = urlVal;
+        saveState(true);
+        await pullStateFromGasCloud(false);
+      });
+
+      // Also make copyGasCodeBtn inside the modal copy the all-in-one code!
+      // Google Apps Script Cloud Database Modal Controls
+      const gasModal = document.getElementById('gasConfigModal');
+      const openGasModal = () => {
+        document.getElementById('gasWebAppUrlInput').value = gasWebAppUrl;
+      const bInput = document.getElementById('bannerGasUrlInput');
+      if (bInput && gasWebAppUrl) bInput.value = gasWebAppUrl;
+        gasModal.classList.remove('hidden');
+        gasModal.classList.add('flex');
+      };
+      const closeGasModal = () => {
+        gasModal.classList.add('hidden');
+        gasModal.classList.remove('flex');
+      };
+      document.getElementById('openGasModalBtn').addEventListener('click', openGasModal);
+      document.getElementById('closeGasModalBtn').addEventListener('click', closeGasModal);
+      document.getElementById('doneGasModalBtn').addEventListener('click', closeGasModal);
+
+      const tabConnectBtn = document.getElementById('gasTabConnectBtn');
+      const tabCodeBtn = document.getElementById('gasTabCodeBtn');
+      const panelConnect = document.getElementById('gasTabConnectPanel');
+      const panelCode = document.getElementById('gasTabCodePanel');
+
+      tabConnectBtn.addEventListener('click', () => {
+        tabConnectBtn.className = 'px-4 py-2 border-b-2 border-indigo-600 text-indigo-600';
+        tabCodeBtn.className = 'px-4 py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800';
+        panelConnect.classList.remove('hidden');
+        panelCode.classList.add('hidden');
+      });
+      tabCodeBtn.addEventListener('click', () => {
+        tabCodeBtn.className = 'px-4 py-2 border-b-2 border-indigo-600 text-indigo-600';
+        tabConnectBtn.className = 'px-4 py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800';
+        panelCode.classList.remove('hidden');
+        panelConnect.classList.add('hidden');
+      });
+
+      document.getElementById('copyFullHtmlBtn').addEventListener('click', () => {
+        const fullHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(fullHtml).then(() => {
+              showToast('已複製完整前端 Index.html！可在 Apps Script 新增 HTML 檔案貼上');
+            }).catch(() => {
+              showToast('請使用匯出功能或手動複製', 'info');
+            });
+          }
+        } catch (err) {
+          showToast('複製完成！');
+        }
+      });
+
+      document.getElementById('copyGasCodeBtn').addEventListener('click', () => {
+        const codeArea = document.getElementById('gasCodeTextarea');
+        codeArea.value = buildAllInOneGasCode();
+        syncCopyFromTextarea(codeArea, '✅ 已成功複製 Code.gs 程式碼！請貼至試算表的 Apps Script 編輯器');
+      });
+
+      document.getElementById('gasUrlForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const urlVal = document.getElementById('gasWebAppUrlInput').value.trim();
+        if (!urlVal) {
+          showToast('請輸入 Google Apps Script 網頁應用程式網址', 'error');
+          return;
+        }
+        gasWebAppUrl = urlVal;
+        saveState(true);
+        await pullStateFromGasCloud(false);
+      });
+
+      document.getElementById('pullFromGasBtn').addEventListener('click', () => {
+        const urlVal = document.getElementById('gasWebAppUrlInput').value.trim();
+        if (urlVal) gasWebAppUrl = urlVal;
+        pullStateFromGasCloud(false);
+      });
+
+      document.getElementById('pushToGasBtn').addEventListener('click', () => {
+        const urlVal = document.getElementById('gasWebAppUrlInput').value.trim();
+        if (urlVal) gasWebAppUrl = urlVal;
+        if (!gasWebAppUrl) {
+          showToast('請先輸入 Google Apps Script 網頁應用程式網址', 'error');
+          return;
+        }
+        saveState(true);
+        pushStateToGasCloud(false);
+      });
+
+      document.getElementById('disconnectGasBtn').addEventListener('click', () => {
+        gasWebAppUrl = '';
+        document.getElementById('gasWebAppUrlInput').value = '';
+        saveState(true);
+        showToast('已解除雲端資料庫連線，改回本機儲存', 'info');
+      });
+
+      document.getElementById('importJsonInput').addEventListener('change', e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = evt => {
+          try {
+            const parsed = JSON.parse(evt.target.result);
+            if (Array.isArray(parsed.transactions)) {
+              transactions = parsed.transactions;
+              if (parsed.monthlyBudget !== undefined) monthlyBudget = Number(parsed.monthlyBudget) || 25000;
+              renderAll();
+              document.getElementById('chatSummaryTextarea').value = generateChatSummaryText();
+              showToast(`已成功匯入 ${transactions.length} 筆紀錄！`);
+            } else {
+              showToast('JSON 檔案格式不符', 'error');
+            }
+          } catch (err) {
+            showToast('無法解析 JSON 檔案', 'error');
+          }
+        };
+        reader.readAsText(file);
+      });
+    });
+
+    function resetManualForm() {
+      document.getElementById('editTxId').value = '';
+      document.getElementById('entryDate').value = TODAY_STR;
+      document.getElementById('entryAmount').value = '';
+      document.getElementById('entryNote').value = '';
+      document.getElementById('formTitle').textContent = '新增收支紀錄';
+      document.getElementById('submitEntryBtn').textContent = '儲存這筆紀錄';
+      document.getElementById('cancelEditBtn').classList.add('hidden');
+    }
+
+    function shiftMonth(delta) {
+      const base = currentMonthFilter === 'all' ? '2026-10' : currentMonthFilter;
+      const [y, m] = base.split('-').map(Number);
+      const d = new Date(y, m - 1 + delta, 1);
+      const nextY = d.getFullYear();
+      const nextM = String(d.getMonth() + 1).padStart(2, '0');
+      currentMonthFilter = `${nextY}-${nextM}`;
+      document.getElementById('monthFilterInput').value = currentMonthFilter;
+      document.getElementById('allMonthsBtn').className = 'text-xs font-medium px-2.5 py-1 rounded-md text-slate-600 hover:bg-white hover:shadow-sm transition ml-0.5';
+      renderAll();
+    }
+  </script>
+</body>
+</html>
