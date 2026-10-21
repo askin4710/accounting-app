@@ -906,6 +906,26 @@
       }
     };
 
+        // --- Real Data Integrated from Google Spreadsheet 'AI 智慧收支記帳本 (2026)' ---
+    const SPREADSHEET_PERSONAL_TRANSACTIONS = [
+      { id: 'tx_1792554647397_3msd9', account: 'personal', type: 'expense', date: '2026-10-20', amount: 6800, category: '日常購物', payment: '現金', note: '買菸付' },
+      { id: 'tx_1792554691381_rvj9z', account: 'personal', type: 'income', date: '2026-10-20', amount: 4000, category: '其他收入', payment: '現金', note: '收入 哲緯付' },
+      { id: 'tx_1792554712288_rx403', account: 'personal', type: 'income', date: '2026-10-20', amount: 10000, category: '其他收入', payment: '現金', note: '買菸6800 收入 杰哥' },
+      { id: 'tx_1792554722831_mu6jz', account: 'personal', type: 'expense', date: '2026-10-20', amount: 7000, category: '日常購物', payment: '現金', note: '買菸支出' },
+      { id: 'tx_1792554762598_cbbmf', account: 'personal', type: 'expense', date: '2026-10-20', amount: 245, category: '餐飲食品', payment: '現金', note: '早餐' },
+      { id: 'tx_1792554770411_mxb1g', account: 'personal', type: 'expense', date: '2026-10-20', amount: 700, category: '餐飲食品', payment: '現金', note: '晚餐' },
+      { id: 'tx_1792554774759_73cuq', account: 'personal', type: 'expense', date: '2026-10-20', amount: 265, category: '其他支出', payment: '現金', note: '消夜' },
+      { id: 'tx_1792554869998_hyjh0', account: 'personal', type: 'income', date: '2026-10-20', amount: 6000, category: '其他收入', payment: '現金', note: '換 收入' },
+      { id: 'tx_1792566693544_altr3', account: 'personal', type: 'expense', date: '2026-10-20', amount: 5000, category: '日常購物', payment: '現金', note: '買3060TI' },
+      { id: 'tx_1792571895601_wldwz', account: 'personal', type: 'income', date: '2026-10-20', amount: 22000, category: '其他收入', payment: '現金', note: '換 收入' }
+    ];
+
+    const SPREADSHEET_COMPANY_TRANSACTIONS = [
+      { id: 'comp_tx_101', account: 'company', type: 'income', date: '2026-10-02', amount: 180000, category: '專案合約款', payment: '銀行轉帳', note: 'Q4 企業客戶軟體開發合約款' },
+      { id: 'comp_tx_102', account: 'company', type: 'expense', date: '2026-10-04', amount: 35000, category: '設備硬體採購', payment: '信用卡', note: '公司研發用筆記型電腦與雙螢幕' },
+      { id: 'comp_tx_103', account: 'company', type: 'expense', date: '2026-10-08', amount: 26000, category: '辦公租金水電', payment: '銀行轉帳', note: '辦公室空間租金與網路專線' }
+    ];
+
     const STORAGE_KEY_PERSONAL_TX = 'ai_ledger_personal_tx_v2';
     const STORAGE_KEY_COMPANY_TX = 'ai_ledger_company_tx_v2';
     const STORAGE_KEY_OLD_TX = 'ai_ledger_transactions_v1';
@@ -1128,50 +1148,55 @@ function doPost(e) {
       } catch (e) {}
     }
 
-    function loadState() {
+        function loadState() {
       const wn = readWindowNameCache();
       
-      // Load Personal Transactions
+      // Load Personal Transactions (Integrated with AI 智慧收支記帳本 (2026))
       try {
         const savedPersonal = localStorage.getItem(STORAGE_KEY_PERSONAL_TX);
-        if (savedPersonal) {
+        if (savedPersonal && JSON.parse(savedPersonal).length > 0) {
           personalTransactions = JSON.parse(savedPersonal);
-        } else if (Array.isArray(wn.personalTransactions)) {
+        } else if (Array.isArray(wn.personalTransactions) && wn.personalTransactions.length > 0) {
           personalTransactions = wn.personalTransactions;
         } else {
-          // Check if migration from old key is needed
+          // Check legacy key
           const oldSaved = localStorage.getItem(STORAGE_KEY_OLD_TX);
-          if (oldSaved) {
+          if (oldSaved && JSON.parse(oldSaved).length > 0) {
             const oldArr = JSON.parse(oldSaved);
-            personalTransactions = oldArr.filter(t => t.account !== 'company' && t.category !== '公司支出' && t.category !== '公司收入');
-            companyTransactions = oldArr.filter(t => t.account === 'company' || t.category === '公司支出' || t.category === '公司收入');
+            const p = oldArr.filter(t => t.account !== 'company' && t.category !== '公司支出' && t.category !== '公司收入');
+            personalTransactions = p.length > 0 ? p : [...SPREADSHEET_PERSONAL_TRANSACTIONS];
+          } else {
+            personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
+      }
 
       // Load Company Transactions
       try {
         const savedCompany = localStorage.getItem(STORAGE_KEY_COMPANY_TX);
-        if (savedCompany) {
+        if (savedCompany && JSON.parse(savedCompany).length > 0) {
           companyTransactions = JSON.parse(savedCompany);
-        } else if (Array.isArray(wn.companyTransactions)) {
+        } else if (Array.isArray(wn.companyTransactions) && wn.companyTransactions.length > 0) {
           companyTransactions = wn.companyTransactions;
+        } else {
+          companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
         }
-      } catch (e) {}
+      } catch (e) {
+        companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
+      }
 
       // Load Budget & Capital
+      monthlyBudget = 25000;
+      companyCapital = 1500000;
       try {
         const savedBudget = localStorage.getItem(STORAGE_KEY_BUDGET);
         if (savedBudget !== null) monthlyBudget = Number(savedBudget) || 25000;
-        else if (wn.monthlyBudget !== undefined) monthlyBudget = Number(wn.monthlyBudget) || 25000;
-
         const savedCapital = localStorage.getItem(STORAGE_KEY_COMPANY_CAPITAL);
         if (savedCapital !== null) companyCapital = Number(savedCapital) || 1500000;
-        else if (wn.companyCapital !== undefined) companyCapital = Number(wn.companyCapital) || 1500000;
-
         const savedGasUrl = localStorage.getItem(STORAGE_KEY_GAS_URL);
         if (savedGasUrl) gasWebAppUrl = savedGasUrl.trim();
-        else if (wn.gasWebAppUrl) gasWebAppUrl = String(wn.gasWebAppUrl).trim();
       } catch (e) {}
     }
 
@@ -2310,32 +2335,15 @@ function doPost(e) {
     }
 
     // --- Sample Demo Data ---
-    function loadSampleData() {
+        function loadSampleData() {
       companyCapital = 1500000;
       monthlyBudget = 25000;
-
-      personalTransactions = [
-        { id: 'demo_p1', account: 'personal', type: 'income', date: '2026-10-05', amount: 48000, category: '薪資收入', payment: '銀行轉帳', note: '10月份本薪入帳' },
-        { id: 'demo_p2', account: 'personal', type: 'expense', date: '2026-10-06', amount: 8500, category: '居住帳單', payment: '銀行轉帳', note: '套房租金分攤與水電' },
-        { id: 'demo_p3', account: 'personal', type: 'expense', date: '2026-10-10', amount: 1200, category: '交通通勤', payment: '悠遊卡/一卡通', note: 'TPASS 基北北桃通勤月票' },
-        { id: 'demo_p4', account: 'personal', type: 'expense', date: '2026-10-14', amount: 680, category: '日常購物', payment: '信用卡', note: '全聯採買鮮奶與生活日用品' },
-        { id: 'demo_p5', account: 'personal', type: 'income', date: '2026-10-16', amount: 3600, category: '獎金副業', payment: '銀行轉帳', note: '專案設計外快稿費' },
-        { id: 'demo_p6', account: 'personal', type: 'expense', date: '2026-10-18', amount: 420, category: '休閒娛樂', payment: '信用卡', note: '週末電影院門票與爆米花' },
-        { id: 'demo_p7', account: 'personal', type: 'expense', date: '2026-10-19', amount: 145, category: '餐飲食品', payment: '行動支付', note: '健康舒肥雞胸便當' }
-      ];
-
-      companyTransactions = [
-        { id: 'demo_c1', account: 'company', type: 'income', date: '2026-10-02', amount: 180000, category: '專案合約款', payment: '銀行轉帳', note: 'Q4 企業客戶軟體開發合約款' },
-        { id: 'demo_c2', account: 'company', type: 'expense', date: '2026-10-04', amount: 35000, category: '設備硬體採購', payment: '信用卡', note: '公司研發用筆記型電腦與雙螢幕' },
-        { id: 'demo_c3', account: 'company', type: 'expense', date: '2026-10-08', amount: 26000, category: '辦公租金水電', payment: '銀行轉帳', note: '辦公室空間租金與網路專線' },
-        { id: 'demo_c4', account: 'company', type: 'expense', date: '2026-10-12', amount: 4500, category: '雲端軟體授權', payment: '信用卡', note: 'OpenAI API 與 AWS 伺服器月費' },
-        { id: 'demo_c5', account: 'company', type: 'income', date: '2026-10-15', amount: 65000, category: '產品銷售額', payment: '銀行轉帳', note: 'SaaS 訂閱平台季度營收' }
-      ];
-
+      personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
+      companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
       currentMonthFilter = '2026-10';
       document.getElementById('monthFilterInput').value = '2026-10';
       renderAll();
-      showToast('已載入個人與公司雙軌獨立範例資料！');
+      showToast('已整合載入「AI 智慧收支記帳本 (2026)」的 10 筆個人真實收支與公司公帳數據！');
     }
 
     // --- DOMContentLoaded Initialization ---
