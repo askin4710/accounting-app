@@ -191,22 +191,91 @@
       </div>
     </section>
 
+    <!-- Account Mode Filter / Switcher Bar (Personal vs Company) -->
+    <section class="bg-white rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-2.5">
+      <div class="flex items-center gap-1.5 w-full sm:w-auto">
+        <span class="text-xs font-bold text-slate-500 mr-1 hidden sm:inline">帳本切換：</span>
+        <button type="button" id="accountTabAll" class="account-tab-btn flex-1 sm:flex-none px-3.5 py-1.5 rounded-xl text-xs font-bold bg-teal-600 text-white shadow-2xs transition active:scale-95 flex items-center justify-center gap-1">
+          <span>⚡ 全部帳目</span>
+        </button>
+        <button type="button" id="accountTabPersonal" class="account-tab-btn flex-1 sm:flex-none px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition active:scale-95 flex items-center justify-center gap-1">
+          <span>👤 個人日常</span>
+        </button>
+        <button type="button" id="accountTabCompany" class="account-tab-btn flex-1 sm:flex-none px-3.5 py-1.5 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition active:scale-95 flex items-center justify-center gap-1.5">
+          <span>🏢 公司記帳</span>
+          <span id="companyHeaderBalanceBadge" class="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-indigo-200 text-indigo-900">150萬</span>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 ml-auto">
+        <button type="button" id="quickOpenCompanyModalBtn" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition active:scale-95">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>設定公司資金</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Dedicated Company Capital Dashboard Card -->
+    <section id="companyCapitalSection" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-800/80 rounded-2xl p-4 sm:p-5 text-white shadow-sm space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 flex items-center justify-center font-bold text-base">
+            🏢
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              公司資金專屬記帳池
+              <span id="companyHealthBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">本金充足</span>
+            </h3>
+            <p class="text-xs text-slate-300">依設定之初始資本（如 150 萬），即時統計公司收入、支出與結餘</p>
+          </div>
+        </div>
+        <button type="button" id="editCompanyCapitalBtn" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-indigo-200 border border-white/15 transition self-start sm:self-center active:scale-95">
+          ⚙️ 調整公司資金數額
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
+        <div class="bg-white/10 rounded-xl p-3 border border-white/10">
+          <div class="text-[11px] text-slate-300">初始設定資金</div>
+          <div id="companyInitCapitalDisplay" class="text-base sm:text-lg font-bold text-white mt-0.5">NT$ 1,500,000</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">基準營運資本</div>
+        </div>
+
+        <div class="bg-white/10 rounded-xl p-3 border border-white/10">
+          <div class="text-[11px] text-emerald-300">公司總收入 (+)</div>
+          <div id="companyIncomeDisplay" class="text-base sm:text-lg font-bold text-emerald-300 mt-0.5">NT$ 0</div>
+          <div id="companyIncomeCountDisplay" class="text-[10px] text-slate-400 mt-0.5">共 0 筆公帳收入</div>
+        </div>
+
+        <div class="bg-white/10 rounded-xl p-3 border border-white/10">
+          <div class="text-[11px] text-rose-300">公司總支出 (-)</div>
+          <div id="companyExpenseDisplay" class="text-base sm:text-lg font-bold text-rose-300 mt-0.5">NT$ 0</div>
+          <div id="companyExpenseCountDisplay" class="text-[10px] text-slate-400 mt-0.5">共 0 筆公帳支出</div>
+        </div>
+
+        <div class="bg-indigo-600/30 border border-indigo-400/40 rounded-xl p-3">
+          <div class="text-[11px] text-teal-200">目前公司資金餘額</div>
+          <div id="companyBalanceDisplay" class="text-base sm:text-lg font-extrabold text-teal-200 mt-0.5">NT$ 1,500,000</div>
+          <div id="companyBalanceSubDisplay" class="text-[10px] text-indigo-200 mt-0.5">本金剩餘 100%</div>
+        </div>
+      </div>
+    </section>
+
     <!-- AI Smart Quick Input Card -->
     <section id="aiSmartInputSection" data-mobile-view="record" class="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-900 rounded-2xl p-4 sm:p-5 text-white shadow-md">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div class="space-y-1">
-          <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-300 uppercase tracking-wider">
-            <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
-            AI 智慧語意快速記帳
-          </div>
-          <h2 class="text-base sm:text-lg font-bold">一句話記帳，自動解析金額、分類、日期與支付方式</h2>
-          <p class="text-xs text-slate-300">支援語音轉文字貼上或多筆批次輸入，例如：<code class="bg-white/10 px-1.5 py-0.5 rounded text-teal-200">午餐牛肉麵 160, 捷運 35, 10/18 薪資 45000</code></p>
+      <div class="flex items-center justify-between gap-3">
+        <div class="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-teal-300">
+          <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+          AI 智慧快速記帳
         </div>
-        <div class="flex items-center gap-2 self-start md:self-center">
-          <button id="loadDemoBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 transition">
+        <div class="flex items-center gap-2">
+          <button id="loadDemoBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 transition active:scale-95">
             載入範例
           </button>
-          <button id="clearAllBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 transition">
+          <button id="clearAllBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 transition active:scale-95">
             清空帳本
           </button>
         </div>
@@ -236,6 +305,8 @@
       <div class="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
         <span class="text-slate-400 shrink-0 mr-0.5">常用：</span>
         <button type="button" data-quick="午餐便當 125" class="quick-chip shrink-0 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition active:scale-95">+ 午餐便當 $125</button>
+        <button type="button" data-quick="公司採購電腦設備 35000 信用卡" class="quick-chip shrink-0 px-3 py-1.5 rounded-full bg-indigo-500/30 hover:bg-indigo-500/40 text-indigo-200 border border-indigo-400/40 transition active:scale-95">+ 🏢 公司設備 $35,000</button>
+        <button type="button" data-quick="客戶專案合約款 150000 轉帳 公司收入" class="quick-chip shrink-0 px-3 py-1.5 rounded-full bg-emerald-500/30 hover:bg-emerald-500/40 text-emerald-200 border border-emerald-400/40 transition active:scale-95">+ 🏢 客戶專案款 $150,000</button>
         <button type="button" data-quick="捷運通勤 40 悠遊卡" class="quick-chip shrink-0 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition active:scale-95">+ 捷運通勤 $40</button>
         <button type="button" data-quick="全聯採買日用品 480 信用卡" class="quick-chip shrink-0 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition active:scale-95">+ 全聯採買 $480</button>
         <button type="button" data-quick="10月薪資收入 48000 轉帳" class="quick-chip shrink-0 px-3 py-1.5 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 transition active:scale-95">+ 薪資 $48,000</button>
@@ -336,6 +407,19 @@
           <form id="manualEntryForm" class="space-y-3">
             <input type="hidden" id="editTxId" value="" />
             <input type="hidden" id="entryType" value="expense" />
+            <input type="hidden" id="entryAccount" value="personal" />
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">記帳帳本歸屬</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" id="formAccountPersonalBtn" class="py-2 px-3 rounded-xl text-xs font-bold bg-slate-900 text-white border border-slate-900 transition flex items-center justify-center gap-1.5 active:scale-95">
+                  <span>👤 個人日常帳</span>
+                </button>
+                <button type="button" id="formAccountCompanyBtn" class="py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition flex items-center justify-center gap-1.5 active:scale-95">
+                  <span>🏢 公司記帳 (公帳)</span>
+                </button>
+              </div>
+            </div>
 
             <div class="grid grid-cols-2 gap-2.5">
               <div>
@@ -435,6 +519,12 @@
 
           <!-- Filters -->
           <div class="flex flex-wrap items-center gap-2">
+            <select id="filterAccount" class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-base sm:text-xs font-medium bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="all">全部帳本</option>
+              <option value="personal">僅看個人</option>
+              <option value="company">僅看公司</option>
+            </select>
+
             <select id="filterType" class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-base sm:text-xs font-medium bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500">
               <option value="all">全部收支</option>
               <option value="expense">僅看支出</option>
@@ -575,6 +665,41 @@
         <div class="flex justify-end gap-2">
           <button type="button" id="cancelBudgetBtn" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700">取消</button>
           <button type="submit" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-xs font-semibold text-white">儲存設定</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Company Capital Setting Modal -->
+  <div id="companyCapitalModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-1.5">
+          <span>🏢 設定公司資金數額</span>
+        </h3>
+        <button type="button" id="closeCompanyCapitalModalBtn" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <form id="companyCapitalForm" class="space-y-4">
+        <div>
+          <label for="companyCapitalInput" class="block text-xs font-semibold text-slate-600 mb-1">公司初始資金總額 (NT$)</label>
+          <input id="companyCapitalInput" type="number" min="0" step="10000" inputmode="numeric" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-base font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" placeholder="例如：1500000" />
+          <p class="text-xs text-slate-500 mt-1.5">設定你的公司資本總額（例如 150 萬），後續記錄公司收支時將自動計算資金結餘。</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 text-xs">
+          <span class="text-slate-400 text-[11px]">快捷填入：</span>
+          <button type="button" data-capital="500000" class="capital-preset-chip px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">50萬</button>
+          <button type="button" data-capital="1000000" class="capital-preset-chip px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">100萬</button>
+          <button type="button" data-capital="1500000" class="capital-preset-chip px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold">150萬</button>
+          <button type="button" data-capital="2000000" class="capital-preset-chip px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">200萬</button>
+          <button type="button" data-capital="3000000" class="capital-preset-chip px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">300萬</button>
+        </div>
+        <div class="flex justify-end gap-2 pt-1 border-t border-slate-100">
+          <button type="button" id="cancelCompanyCapitalBtn" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700">取消</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">儲存設定</button>
         </div>
       </form>
     </div>
@@ -734,6 +859,7 @@
     // --- Categories & Metadata ---
     const CATEGORIES = {
       expense: [
+        { id: '公司支出', label: '🏢 公司營運支出 (公帳)', color: '#6366f1', isCompany: true, keywords: ['公司', '公帳', '辦公室', '辦公', '採購', '進貨', '廠商', '報銷', '公關', '勞務', '人事', '薪資發放', '差旅', '伺服器', '軟體授權', '營運', '稅金'] },
         { id: '餐飲食品', label: '餐飲食品', color: '#f43f5e', keywords: ['餐', '飯', '麵', '便當', '早', '午', '晚', '宵夜', '吃', '喝', '咖啡', '星巴克', '飲料', '手搖', '火鍋', '燒肉', '甜點', '麵包', '蛋餅', '水果', '超商', '7-11', '全家', '麥當勞', '肯德基'] },
         { id: '交通通勤', label: '交通通勤', color: '#f59e0b', keywords: ['捷運', '公車', '高鐵', '台鐵', '火車', '計程車', 'Uber', '加油', '停車', '悠遊卡', 'TPASS', '月票', '通勤', '機票'] },
         { id: '日常購物', label: '日常購物', color: '#3b82f6', keywords: ['全聯', '家樂福', '好市多', 'Costco', '日用品', '衛生紙', '衣服', '鞋', '網購', '蝦皮', 'momo', 'PChome', '買', '百貨', '藥妝', '屈臣氏', '寶雅'] },
@@ -744,6 +870,7 @@
         { id: '其他支出', label: '其他支出', color: '#64748b', keywords: ['紅包', '禮金', '禮物', '捐款', '手續費', '雜支'] }
       ],
       income: [
+        { id: '公司收入', label: '🏢 公司營運收入 (公帳)', color: '#059669', isCompany: true, keywords: ['公司收入', '公帳收入', '營業額', '營收', '專案款', '合約款', '顧問費', '服務費', '貨款', '銷貨', '資本投入', '融資'] },
         { id: '薪資收入', label: '薪資收入', color: '#10b981', keywords: ['薪資', '薪水', '月薪', '底薪', '發薪'] },
         { id: '獎金副業', label: '獎金副業', color: '#059669', keywords: ['獎金', '年終', '績效', '稿費', '接案', '外快', '副業', '兼職', '加班費'] },
         { id: '投資理財', label: '投資理財', color: '#0d9488', keywords: ['股息', '股利', '配息', '利息', '股票', 'ETF', '獲利'] },
@@ -754,10 +881,13 @@
     const STORAGE_KEY_TX = 'ai_ledger_transactions_v1';
     const STORAGE_KEY_BUDGET = 'ai_ledger_budget_v1';
     const STORAGE_KEY_GAS_URL = 'ai_ledger_gas_webapp_url_v1';
+    const STORAGE_KEY_COMPANY_CAPITAL = 'ai_ledger_company_capital_v1';
     const TODAY_STR = '2026-10-20';
     let gasWebAppUrl = 'https://script.google.com/macros/s/AKfycbwU0-6SLpDA2hmbXR5BqXb8bONL7fyPFCVQ9pHTz6Ap2utSFdcjAV0duCH1QDLz3p5k/exec';
     let isSyncingGas = false;
     let currentMobileTab = 'record';
+    let currentAccountFilter = 'all'; // 'all' | 'personal' | 'company'
+    let companyCapital = 1500000;
 
     const GAS_CODE_TEMPLATE = `var SPREADSHEET_ID = '1zsu2Z_fxVNWwAMixApr98tZI83_QBchGtITgt7V8t6I';
 var SHEET_NAME = '收支明細';
@@ -938,13 +1068,24 @@ function doPost(e) {
       } catch (e) {
         gasWebAppUrl = String(wn.gasWebAppUrl || DEFAULT_GAS_WEBAPP_URL || '').trim();
       }
+      try {
+        const savedCapital = localStorage.getItem(STORAGE_KEY_COMPANY_CAPITAL);
+        if (savedCapital !== null) {
+          companyCapital = Number(savedCapital) || 1500000;
+        } else if (wn.companyCapital !== undefined) {
+          companyCapital = Number(wn.companyCapital) || 1500000;
+        }
+      } catch (e) {
+        if (wn.companyCapital !== undefined) companyCapital = Number(wn.companyCapital) || 1500000;
+      }
     }
 
     function saveState(skipCloudSync = false) {
-      writeWindowNameCache({ transactions, monthlyBudget, gasWebAppUrl });
+      writeWindowNameCache({ transactions, monthlyBudget, gasWebAppUrl, companyCapital });
       try {
         localStorage.setItem(STORAGE_KEY_TX, JSON.stringify(transactions));
         localStorage.setItem(STORAGE_KEY_BUDGET, String(monthlyBudget));
+        localStorage.setItem(STORAGE_KEY_COMPANY_CAPITAL, String(companyCapital));
         if (gasWebAppUrl) {
           localStorage.setItem(STORAGE_KEY_GAS_URL, gasWebAppUrl);
         } else {
@@ -1205,6 +1346,13 @@ function doPost(e) {
           }
         }
 
+        let account = 'personal';
+        if (currentAccountFilter === 'company' || /公司|公帳|辦公室|採購|進貨|廠商|合約款|專案款|營業額|營收|顧問費/.test(desc) || matchedCat === '公司支出' || matchedCat === '公司收入') {
+          account = 'company';
+          if (entryType === 'expense' && matchedCat === '其他支出') matchedCat = '公司支出';
+          if (entryType === 'income' && matchedCat === '其他收入') matchedCat = '公司收入';
+        }
+
         parsedItems.push({
           id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
           type: entryType,
@@ -1212,6 +1360,7 @@ function doPost(e) {
           amount,
           category: matchedCat,
           payment,
+          account,
           note: desc || matchedCat
         });
       }
@@ -1265,20 +1414,30 @@ function doPost(e) {
 
     // --- Filter Transactions ---
     function getPeriodTransactions() {
-      if (currentMonthFilter === 'all') {
-        return [...transactions];
+      let list = transactions;
+      if (currentMonthFilter !== 'all') {
+        list = list.filter(t => t.date && t.date.startsWith(currentMonthFilter));
       }
-      return transactions.filter(t => t.date && t.date.startsWith(currentMonthFilter));
+      if (currentAccountFilter === 'company') {
+        list = list.filter(t => t.account === 'company' || t.category === '公司支出' || t.category === '公司收入');
+      } else if (currentAccountFilter === 'personal') {
+        list = list.filter(t => t.account !== 'company' && t.category !== '公司支出' && t.category !== '公司收入');
+      }
+      return list;
     }
 
     function getFilteredLedgerTransactions() {
       const periodTx = getPeriodTransactions();
+      const accountFilter = document.getElementById('filterAccount') ? document.getElementById('filterAccount').value : 'all';
       const typeFilter = document.getElementById('filterType').value;
       const catFilter = document.getElementById('filterCategory').value;
       const keyword = document.getElementById('searchKeyword').value.trim().toLowerCase();
 
       return periodTx
         .filter(t => {
+          const isComp = t.account === 'company' || t.category === '公司支出' || t.category === '公司收入';
+          if (accountFilter === 'company' && !isComp) return false;
+          if (accountFilter === 'personal' && isComp) return false;
           if (typeFilter !== 'all' && t.type !== typeFilter) return false;
           if (catFilter !== 'all' && t.category !== catFilter) return false;
           if (keyword) {
@@ -1552,6 +1711,7 @@ function doPost(e) {
               <div class="min-w-0">
                 <div class="flex items-center gap-1.5 sm:gap-2">
                   <p class="text-sm font-bold text-slate-900 truncate">${escapeHtml(tx.note || tx.category)}</p>
+                  ${(tx.account === 'company' || tx.category === '公司支出' || tx.category === '公司收入') ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 border border-indigo-200 shrink-0">🏢 公司</span>' : '<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 shrink-0">👤 個人</span>'}
                   <span class="text-[10px] sm:text-[11px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 shrink-0">${escapeHtml(tx.category)}</span>
                 </div>
                 <div class="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
@@ -1628,9 +1788,72 @@ function doPost(e) {
     function renderAll(skipCloudSync = false) {
       saveState(skipCloudSync);
       renderKPIs();
+      renderCompanyFinances();
       renderCharts();
       renderLedgerList();
     }
+    // --- Render Company Finances & Capital Calculation ---
+    function renderCompanyFinances() {
+      const compTx = transactions.filter(t => t.account === 'company' || t.category === '公司支出' || t.category === '公司收入');
+      const compIncomes = compTx.filter(t => t.type === 'income');
+      const compExpenses = compTx.filter(t => t.type === 'expense');
+
+      const totalCompInc = compIncomes.reduce((s, t) => s + Number(t.amount || 0), 0);
+      const totalCompExp = compExpenses.reduce((s, t) => s + Number(t.amount || 0), 0);
+      const currentCompanyFund = companyCapital + totalCompInc - totalCompExp;
+
+      const initEl = document.getElementById('companyInitCapitalDisplay');
+      const incEl = document.getElementById('companyIncomeDisplay');
+      const incCountEl = document.getElementById('companyIncomeCountDisplay');
+      const expEl = document.getElementById('companyExpenseDisplay');
+      const expCountEl = document.getElementById('companyExpenseCountDisplay');
+      const balEl = document.getElementById('companyBalanceDisplay');
+      const subEl = document.getElementById('companyBalanceSubDisplay');
+      const badgeEl = document.getElementById('companyHealthBadge');
+      const headerBadge = document.getElementById('companyHeaderBalanceBadge');
+
+      if (initEl) initEl.textContent = formatCurrency(companyCapital);
+      if (incEl) incEl.textContent = formatCurrency(totalCompInc);
+      if (incCountEl) incCountEl.textContent = `共 ${compIncomes.length} 筆公帳收入`;
+      if (expEl) expEl.textContent = formatCurrency(totalCompExp);
+      if (expCountEl) expCountEl.textContent = `共 ${compExpenses.length} 筆公帳支出`;
+
+      if (balEl) {
+        balEl.textContent = formatCurrency(currentCompanyFund);
+        if (currentCompanyFund >= companyCapital) {
+          balEl.className = 'text-base sm:text-lg font-extrabold text-teal-300 mt-0.5 truncate';
+        } else if (currentCompanyFund >= companyCapital * 0.5) {
+          balEl.className = 'text-base sm:text-lg font-extrabold text-amber-300 mt-0.5 truncate';
+        } else {
+          balEl.className = 'text-base sm:text-lg font-extrabold text-rose-300 mt-0.5 truncate';
+        }
+      }
+
+      const wanUnit = (currentCompanyFund / 10000).toFixed(1).replace(/\.0$/, '');
+      if (headerBadge) headerBadge.textContent = `${wanUnit}萬`;
+
+      if (subEl && badgeEl) {
+        if (companyCapital > 0) {
+          const pct = Math.round((currentCompanyFund / companyCapital) * 100);
+          subEl.textContent = `本金變動率：${pct}%（基準設定額 ${formatCurrency(companyCapital)}）`;
+          if (pct >= 100) {
+            const growth = pct - 100;
+            badgeEl.textContent = growth > 0 ? `盈利增長 +${growth}%` : '本金保全 100%';
+            badgeEl.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30';
+          } else if (pct >= 50) {
+            badgeEl.textContent = `資金剩餘 ${pct}%`;
+            badgeEl.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30';
+          } else {
+            badgeEl.textContent = `資金警戒 (剩餘 ${pct}%)`;
+            badgeEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/30 text-rose-200 border border-rose-400/30';
+          }
+        } else {
+          subEl.textContent = '未設定公司初始資本';
+          badgeEl.textContent = '未設定本金';
+        }
+      }
+    }
+
 
     // --- Mobile Tab Switching Engine ---
     function switchMobileTab(tabKey) {
@@ -1690,12 +1913,19 @@ function doPost(e) {
       const balance = totalInc - totalExp;
 
       const periodTitle = currentMonthFilter === 'all' ? '全部期間' : currentMonthFilter;
+      const compTx = transactions.filter(t => t.account === 'company' || t.category === '公司支出' || t.category === '公司收入');
+      const compInc = compTx.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0);
+      const compExp = compTx.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
+      const compFund = companyCapital + compInc - compExp;
+
       const lines = [
         `【${periodTitle} 帳務同步摘要】`,
         `• 總收入：${formatCurrency(totalInc)}（${incomes.length} 筆）`,
         `• 總支出：${formatCurrency(totalExp)}（${expenses.length} 筆）`,
         `• 淨結餘：${balance >= 0 ? '' : '-'}${formatCurrency(Math.abs(balance))}`,
         `• 每月預算上限：${formatCurrency(monthlyBudget)}`,
+        `• 公司初始資本：${formatCurrency(companyCapital)}`,
+        `• 目前公司資金結餘：${formatCurrency(compFund)}（公帳收入 ${formatCurrency(compInc)}，公帳支出 ${formatCurrency(compExp)}）`,
         ``,
         `【近期明細】`
       ];
@@ -1714,15 +1944,18 @@ function doPost(e) {
 
     // --- Sample Demo Data ---
     function loadSampleData() {
+      companyCapital = 1500000;
       transactions = [
-        { id: 'demo_1', type: 'income', date: '2026-10-05', amount: 48000, category: '薪資收入', payment: '銀行轉帳', note: '10月份本薪入帳' },
-        { id: 'demo_2', type: 'expense', date: '2026-10-06', amount: 8500, category: '居住帳單', payment: '銀行轉帳', note: '套房租金分攤與水電' },
-        { id: 'demo_3', type: 'expense', date: '2026-10-10', amount: 1200, category: '交通通勤', payment: '悠遊卡/一卡通', note: 'TPASS 基北北桃通勤月票' },
-        { id: 'demo_4', type: 'expense', date: '2026-10-14', amount: 680, category: '日常購物', payment: '信用卡', note: '全聯採買鮮奶與生活日用品' },
-        { id: 'demo_5', type: 'income', date: '2026-10-16', amount: 3600, category: '獎金副業', payment: '銀行轉帳', note: '專案設計外快稿費' },
-        { id: 'demo_6', type: 'expense', date: '2026-10-18', amount: 420, category: '休閒娛樂', payment: '信用卡', note: '週末電影院門票與爆米花' },
-        { id: 'demo_7', type: 'expense', date: '2026-10-19', amount: 145, category: '餐飲食品', payment: '行動支付', note: '健康舒肥雞胸便當' },
-        { id: 'demo_8', type: 'expense', date: '2026-10-19', amount: 65, category: '餐飲食品', payment: '現金', note: '美式冰咖啡' }
+        { id: 'demo_c1', type: 'income', date: '2026-10-02', amount: 180000, category: '公司收入', payment: '銀行轉帳', account: 'company', note: 'Q4 企業客戶軟體開發合約款' },
+        { id: 'demo_c2', type: 'expense', date: '2026-10-04', amount: 35000, category: '公司支出', payment: '信用卡', account: 'company', note: '公司研發用筆記型電腦與雙螢幕' },
+        { id: 'demo_1', type: 'income', date: '2026-10-05', amount: 48000, category: '薪資收入', payment: '銀行轉帳', account: 'personal', note: '10月份本薪入帳' },
+        { id: 'demo_2', type: 'expense', date: '2026-10-06', amount: 8500, category: '居住帳單', payment: '銀行轉帳', account: 'personal', note: '套房租金分攤與水電' },
+        { id: 'demo_c3', type: 'expense', date: '2026-10-08', amount: 26000, category: '公司支出', payment: '銀行轉帳', account: 'company', note: '辦公室空間租金與網路專線' },
+        { id: 'demo_3', type: 'expense', date: '2026-10-10', amount: 1200, category: '交通通勤', payment: '悠遊卡/一卡通', account: 'personal', note: 'TPASS 基北北桃通勤月票' },
+        { id: 'demo_4', type: 'expense', date: '2026-10-14', amount: 680, category: '日常購物', payment: '信用卡', account: 'personal', note: '全聯採買鮮奶與生活日用品' },
+        { id: 'demo_5', type: 'income', date: '2026-10-16', amount: 3600, category: '獎金副業', payment: '銀行轉帳', account: 'personal', note: '專案設計外快稿費' },
+        { id: 'demo_6', type: 'expense', date: '2026-10-18', amount: 420, category: '休閒娛樂', payment: '信用卡', account: 'personal', note: '週末電影院門票與爆米花' },
+        { id: 'demo_7', type: 'expense', date: '2026-10-19', amount: 145, category: '餐飲食品', payment: '行動支付', account: 'personal', note: '健康舒肥雞胸便當' }
       ];
       currentMonthFilter = '2026-10';
       document.getElementById('monthFilterInput').value = '2026-10';
@@ -1845,6 +2078,7 @@ function doPost(e) {
         e.preventDefault();
         const editId = document.getElementById('editTxId').value;
         const type = document.getElementById('entryType').value;
+        const account = document.getElementById('entryAccount').value || 'personal';
         const date = document.getElementById('entryDate').value || TODAY_STR;
         const amount = Math.round(Number(document.getElementById('entryAmount').value || 0));
         const category = document.getElementById('entryCategory').value;
@@ -1859,7 +2093,7 @@ function doPost(e) {
         if (editId) {
           const idx = transactions.findIndex(t => t.id === editId);
           if (idx !== -1) {
-            transactions[idx] = { ...transactions[idx], type, date, amount, category, payment, note };
+            transactions[idx] = { ...transactions[idx], type, account, date, amount, category, payment, note };
           }
           resetManualForm();
           showToast('已更新該筆收支紀錄！');
@@ -1867,6 +2101,7 @@ function doPost(e) {
           transactions.push({
             id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
             type,
+            account,
             date,
             amount,
             category,
@@ -1903,6 +2138,18 @@ function doPost(e) {
           document.getElementById('entryCategory').value = tx.category;
           document.getElementById('entryPayment').value = tx.payment || '現金';
           document.getElementById('entryNote').value = tx.note;
+          const txAcc = tx.account || (tx.category === '公司支出' || tx.category === '公司收入' ? 'company' : 'personal');
+          const perBtn = document.getElementById('formAccountPersonalBtn');
+          const comBtn = document.getElementById('formAccountCompanyBtn');
+          const accInput = document.getElementById('entryAccount');
+          if (accInput) accInput.value = txAcc;
+          if (txAcc === 'company') {
+            if (comBtn) comBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white border border-indigo-600 transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs';
+            if (perBtn) perBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition flex items-center justify-center gap-1.5 active:scale-95';
+          } else {
+            if (perBtn) perBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-slate-900 text-white border border-slate-900 transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs';
+            if (comBtn) comBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition flex items-center justify-center gap-1.5 active:scale-95';
+          }
           document.getElementById('formTitle').textContent = '編輯收支紀錄';
           document.getElementById('submitEntryBtn').textContent = '更新紀錄';
           document.getElementById('cancelEditBtn').classList.remove('hidden');
@@ -1933,10 +2180,117 @@ function doPost(e) {
         renderAll();
       });
 
+      // Account Switcher Tabs
+      function setAccountFilter(accountMode) {
+        currentAccountFilter = accountMode;
+        const allBtn = document.getElementById('accountTabAll');
+        const perBtn = document.getElementById('accountTabPersonal');
+        const comBtn = document.getElementById('accountTabCompany');
+        const capCard = document.getElementById('companyCapitalSection');
+
+        if (allBtn) allBtn.className = 'account-tab-btn flex-1 sm:flex-none px-3.5 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center gap-1 ' + (accountMode === 'all' ? 'bg-teal-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100');
+        if (perBtn) perBtn.className = 'account-tab-btn flex-1 sm:flex-none px-3.5 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center gap-1 ' + (accountMode === 'personal' ? 'bg-slate-900 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100');
+        if (comBtn) comBtn.className = 'account-tab-btn flex-1 sm:flex-none px-3.5 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center gap-1 ' + (accountMode === 'company' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200');
+
+        if (capCard) {
+          if (accountMode === 'personal') {
+            capCard.classList.add('hidden');
+          } else {
+            capCard.classList.remove('hidden');
+          }
+        }
+
+        const filterAcc = document.getElementById('filterAccount');
+        if (filterAcc) filterAcc.value = accountMode;
+
+        // Sync form account default
+        if (accountMode === 'company') {
+          setFormAccount('company');
+        } else if (accountMode === 'personal') {
+          setFormAccount('personal');
+        }
+
+        renderAll();
+      }
+
+      function setFormAccount(acc) {
+        const input = document.getElementById('entryAccount');
+        const perBtn = document.getElementById('formAccountPersonalBtn');
+        const comBtn = document.getElementById('formAccountCompanyBtn');
+        if (input) input.value = acc;
+        if (acc === 'company') {
+          if (comBtn) comBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white border border-indigo-600 transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs';
+          if (perBtn) perBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition flex items-center justify-center gap-1.5 active:scale-95';
+          const type = document.getElementById('entryType').value;
+          const catSelect = document.getElementById('entryCategory');
+          if (catSelect) {
+            const target = type === 'income' ? '公司收入' : '公司支出';
+            if ([...catSelect.options].some(o => o.value === target)) catSelect.value = target;
+          }
+        } else {
+          if (perBtn) perBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-slate-900 text-white border border-slate-900 transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs';
+          if (comBtn) comBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition flex items-center justify-center gap-1.5 active:scale-95';
+        }
+      }
+
+      document.getElementById('accountTabAll').addEventListener('click', () => setAccountFilter('all'));
+      document.getElementById('accountTabPersonal').addEventListener('click', () => setAccountFilter('personal'));
+      document.getElementById('accountTabCompany').addEventListener('click', () => setAccountFilter('company'));
+
+      const formAccPer = document.getElementById('formAccountPersonalBtn');
+      if (formAccPer) formAccPer.addEventListener('click', () => setFormAccount('personal'));
+      const formAccCom = document.getElementById('formAccountCompanyBtn');
+      if (formAccCom) formAccCom.addEventListener('click', () => setFormAccount('company'));
+
       // Filter Controls
+      const filterAccSelect = document.getElementById('filterAccount');
+      if (filterAccSelect) {
+        filterAccSelect.addEventListener('change', () => {
+          renderLedgerList();
+        });
+      }
       document.getElementById('filterType').addEventListener('change', renderLedgerList);
       document.getElementById('filterCategory').addEventListener('change', renderLedgerList);
       document.getElementById('searchKeyword').addEventListener('input', renderLedgerList);
+
+      // Company Capital Modal
+      const compCapitalModal = document.getElementById('companyCapitalModal');
+      const openCompCapitalModal = () => {
+        document.getElementById('companyCapitalInput').value = companyCapital;
+        compCapitalModal.classList.remove('hidden');
+        compCapitalModal.classList.add('flex');
+      };
+      const closeCompCapitalModal = () => {
+        compCapitalModal.classList.add('hidden');
+        compCapitalModal.classList.remove('flex');
+      };
+      const editCapBtn = document.getElementById('editCompanyCapitalBtn');
+      if (editCapBtn) editCapBtn.addEventListener('click', openCompCapitalModal);
+      const quickCapBtn = document.getElementById('quickOpenCompanyModalBtn');
+      if (quickCapBtn) quickCapBtn.addEventListener('click', openCompCapitalModal);
+      const closeCapBtn = document.getElementById('closeCompanyCapitalModalBtn');
+      if (closeCapBtn) closeCapBtn.addEventListener('click', closeCompCapitalModal);
+      const cancelCapBtn = document.getElementById('cancelCompanyCapitalBtn');
+      if (cancelCapBtn) cancelCapBtn.addEventListener('click', closeCompCapitalModal);
+
+      document.querySelectorAll('.capital-preset-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const val = Number(chip.getAttribute('data-capital'));
+          if (val) document.getElementById('companyCapitalInput').value = val;
+        });
+      });
+
+      const compCapForm = document.getElementById('companyCapitalForm');
+      if (compCapForm) {
+        compCapForm.addEventListener('submit', e => {
+          e.preventDefault();
+          const val = Math.max(0, Math.round(Number(document.getElementById('companyCapitalInput').value || 0)));
+          companyCapital = val;
+          closeCompCapitalModal();
+          renderAll();
+          showToast(`已成功設定公司資金數額為 ${formatCurrency(companyCapital)}！`);
+        });
+      }
 
       // Chart Tabs
       const tabCat = document.getElementById('chartTabCategory');
@@ -2016,10 +2370,11 @@ function doPost(e) {
 
       // CSV Export
       document.getElementById('exportCsvBtn').addEventListener('click', () => {
-        const headers = ['日期', '收支類型', '分類', '品項說明', '金額(TWD)', '支付方式'];
+        const headers = ['日期', '收支類型', '帳本歸屬', '分類', '品項說明', '金額(TWD)', '支付方式'];
         const rows = transactions.map(t => [
           t.date,
           t.type === 'expense' ? '支出' : '收入',
+          (t.account === 'company' || t.category === '公司支出' || t.category === '公司收入') ? '公司記帳' : '個人日常',
           t.category,
           `"${String(t.note || '').replace(/"/g, '""')}"`,
           t.amount,
@@ -2180,6 +2535,18 @@ function doPost(e) {
       document.getElementById('formTitle').textContent = '手動記帳 / 編輯';
       document.getElementById('submitEntryBtn').textContent = '儲存這筆紀錄';
       document.getElementById('cancelEditBtn').classList.add('hidden');
+      const targetAcc = currentAccountFilter === 'company' ? 'company' : 'personal';
+      const perBtn = document.getElementById('formAccountPersonalBtn');
+      const comBtn = document.getElementById('formAccountCompanyBtn');
+      const accInput = document.getElementById('entryAccount');
+      if (accInput) accInput.value = targetAcc;
+      if (targetAcc === 'company') {
+        if (comBtn) comBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white border border-indigo-600 transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs';
+        if (perBtn) perBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition flex items-center justify-center gap-1.5 active:scale-95';
+      } else {
+        if (perBtn) perBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-slate-900 text-white border border-slate-900 transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs';
+        if (comBtn) comBtn.className = 'py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition flex items-center justify-center gap-1.5 active:scale-95';
+      }
     }
 
     function shiftMonth(delta) {
