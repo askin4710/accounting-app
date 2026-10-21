@@ -518,11 +518,6 @@
 
           <!-- Filters -->
           <div class="flex flex-wrap items-center gap-2">
-            <select id="filterAccount" class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-base sm:text-xs font-semibold bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500">
-              <option value="personal">👤 僅看個人帳</option>
-              <option value="company">🏢 僅看公司帳</option>
-              <option value="all">⚡ 雙帳合覽</option>
-            </select>
 
             <select id="filterType" class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-base sm:text-xs font-medium bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500">
               <option value="all">全部收支</option>
@@ -1476,17 +1471,7 @@ function doPost(e) {
     }
 
     function getFilteredLedgerTransactions() {
-      let list = [];
-      const filterAcc = document.getElementById('filterAccount') ? document.getElementById('filterAccount').value : currentAccountMode;
-
-      if (filterAcc === 'personal') {
-        list = personalTransactions.map(t => ({ ...t, account: 'personal' }));
-      } else if (filterAcc === 'company') {
-        list = companyTransactions.map(t => ({ ...t, account: 'company' }));
-      } else {
-        list = personalTransactions.map(t => ({ ...t, account: 'personal' }))
-          .concat(companyTransactions.map(t => ({ ...t, account: 'company' })));
-      }
+      let list = getActiveAccountTransactions();
 
       if (currentMonthFilter !== 'all') {
         list = list.filter(t => t.date && t.date.startsWith(currentMonthFilter));
@@ -1666,7 +1651,7 @@ function doPost(e) {
       const currentVal = select.value;
       select.innerHTML = '<option value="all">所有分類項目</option>';
       
-      const filterAcc = document.getElementById('filterAccount') ? document.getElementById('filterAccount').value : currentAccountMode;
+      const filterAcc = currentAccountMode;
       let categoriesToAdd = [];
       if (filterAcc === 'personal') {
         categoriesToAdd = [...CATEGORIES.personal.expense, ...CATEGORIES.personal.income];
@@ -2108,14 +2093,14 @@ function doPost(e) {
       const titleEl = document.getElementById('ledgerTitle');
       const subtitleEl = document.getElementById('ledgerSubtitle');
       
-      const filterAcc = document.getElementById('filterAccount') ? document.getElementById('filterAccount').value : currentAccountMode;
-      const accLabel = filterAcc === 'company' ? '公司公帳明細' : filterAcc === 'personal' ? '個人生活收支明細' : '雙帳綜合明細';
+      const accLabel = currentAccountMode === 'company' ? '公司公帳收支明細' : currentAccountMode === 'personal' ? '個人生活收支明細' : '雙軌綜合收支明細';
 
       if (titleEl) titleEl.textContent = accLabel;
       if (subtitleEl) {
         const periodText = currentMonthFilter === 'all' ? '全部期間' : `${currentMonthFilter.replace('-', '年')}月`;
-        const totalCount = filterAcc === 'company' ? companyTransactions.length : filterAcc === 'personal' ? personalTransactions.length : (personalTransactions.length + companyTransactions.length);
-        subtitleEl.textContent = `顯示 ${periodText} 的交易紀錄（共 ${totalCount} 筆）`;
+        const totalCount = currentAccountMode === 'company' ? companyTransactions.length : currentAccountMode === 'personal' ? personalTransactions.length : (personalTransactions.length + companyTransactions.length);
+        const accDesc = currentAccountMode === 'company' ? '公帳' : currentAccountMode === 'personal' ? '個人' : '雙軌綜合';
+        subtitleEl.textContent = `顯示 ${periodText} 的${accDesc}交易紀錄（共 ${totalCount} 筆）`;
       }
 
       const listEl = document.getElementById('transactionListContainer');
@@ -2236,7 +2221,6 @@ function doPost(e) {
       const capSection = document.getElementById('companyCapitalSection');
       const badge = document.getElementById('currentAccountBadge');
       const icon = document.getElementById('appBrandIcon');
-      const filterAcc = document.getElementById('filterAccount');
 
       if (mode === 'company') {
         if (comBtn) comBtn.className = 'account-tab-btn flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-2xs transition active:scale-95 flex items-center justify-center gap-1.5';
@@ -2271,7 +2255,6 @@ function doPost(e) {
         }
       }
 
-      if (filterAcc) filterAcc.value = mode;
       populateFilterCategories();
       renderAll();
     }
@@ -2675,13 +2658,6 @@ function doPost(e) {
       });
 
       // Filter Controls
-      const filterAccSelect = document.getElementById('filterAccount');
-      if (filterAccSelect) {
-        filterAccSelect.addEventListener('change', () => {
-          populateFilterCategories();
-          renderLedgerList();
-        });
-      }
       document.getElementById('filterType').addEventListener('change', renderLedgerList);
       document.getElementById('filterCategory').addEventListener('change', renderLedgerList);
       document.getElementById('searchKeyword').addEventListener('input', renderLedgerList);
