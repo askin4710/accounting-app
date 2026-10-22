@@ -131,7 +131,7 @@
         <button id="openGasModalBtn" type="button" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition" title="設定 Google Apps Script 試算表後端資料庫">
           <span id="gasStatusDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span id="gasStatusText" class="hidden sm:inline">雙帳雲端資料庫已連線</span>
-          <span class="sm:hidden text-[11px] font-bold">雲端</span>
+          <span id="gasStatusTextMobile" class="sm:hidden text-[11px] font-bold">雲端</span>
         </button>
 
         <!-- Google Sheet Links (Dual Independent Sheets) -->
@@ -1364,8 +1364,91 @@ function doPost(e) {
         const savedCapital = localStorage.getItem(STORAGE_KEY_COMPANY_CAPITAL);
         if (savedCapital !== null) companyCapital = Number(savedCapital) || 1500000;
         const savedGasUrl = localStorage.getItem(STORAGE_KEY_GAS_URL);
-        if (savedGasUrl) gasWebAppUrl = savedGasUrl.trim();
+        if (savedGasUrl && savedGasUrl.trim()) {
+          gasWebAppUrl = savedGasUrl.trim();
+        } else {
+          gasWebAppUrl = DEFAULT_GAS_WEBAPP_URL;
+        }
       } catch (e) {}
+    }
+
+    // --- Live Cloud Auto-Sync Engine (即時全自動雲端雙向同步) ---
+    let isPushingGas = false;
+    let pendingGasPush = false;
+    let isPullingGas = false;
+    let lastLocalMutationTime = 0;
+    let lastSyncSuccessTime = null;
+    let autoSyncDebounceTimer = null;
+    let lastPullAttemptTime = 0;
+
+    function hasTransactionListDiff(listA, listB) {
+      if (!Array.isArray(listA) || !Array.isArray(listB)) return true;
+      if (listA.length !== listB.length) return true;
+      for (let i = 0; i < listA.length; i++) {
+        const a = listA[i];
+        const b = listB[i];
+        if (
+          a.id !== b.id ||
+          Number(a.amount || 0) !== Number(b.amount || 0) ||
+          a.date !== b.date ||
+          a.type !== b.type ||
+          a.category !== b.category ||
+          a.note !== b.note ||
+          a.payment !== b.payment
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function scheduleAutoCloudPush(delayMs = 350) {
+      lastLocalMutationTime = Date.now();
+      if (autoSyncDebounceTimer) {
+        clearTimeout(autoSyncDebounceTimer);
+      }
+      updateGasStatusUI('syncing', '正在自動同步寫入雲端試算表...');
+      autoSyncDebounceTimer = setTimeout(() => {
+        executeAutoPush();
+      }, delayMs);
+    }
+
+    async function executeAutoPush() {
+      if (isPushingGas) {
+        pendingGasPush = true;
+        return;
+      }
+      isPushingGas = true;
+      pendingGasPush = false;
+
+      try {
+        await pushStateToGasCloud(false, true);
+      } catch (err) {
+        console.error('Auto push error:', err);
+      } finally {
+        isPushingGas = false;
+        if (pendingGasPush) {
+          pendingGasPush = false;
+          executeAutoPush();
+        }
+      }
+    }
+
+    function triggerAutoCloudPull(silent = true) {
+      // 若 3 秒內剛手動異動過、或正在寫入/讀取中，暫緩自動拉取避免資料衝突
+      if (Date.now() - lastLocalMutationTime < 3000 || isPushingGas || isPullingGas) {
+        return;
+      }
+      // 避免短時間內連續觸發（至少間隔 4 秒）
+      if (Date.now() - lastPullAttemptTime < 4000) {
+        return;
+      }
+      // 若使用者正打開編輯表單正在輸入中，背景不強制刷新清空表單
+      const editInput = document.getElementById('editTxId');
+      if (editInput && editInput.value && silent) {
+        return;
+      }
+      pullStateFromGasCloud(silent);
     }
 
     function saveState(skipCloudSync = false) {
@@ -1390,44 +1473,71 @@ function doPost(e) {
       } catch (e) {}
 
       updateGasStatusUI();
+      // 凡新增、修改、刪除紀錄，全自動防抖排程寫入雲端！
       if (!skipCloudSync && (gasWebAppUrl || IS_GAS_HOSTED)) {
-        pushStateToGasCloud(true);
+        scheduleAutoCloudPush(350);
       }
     }
 
     function updateGasStatusUI(statusState = null, customMsg = null) {
       const dot = document.getElementById('gasStatusDot');
       const text = document.getElementById('gasStatusText');
+      const textMobile = document.getElementById('gasStatusTextMobile');
       const badge = document.getElementById('gasModalBadge');
       const logText = document.getElementById('gasSyncLogText');
+      const mobileSyncBadge = document.getElementById('mobileSyncStateBadge');
       if (!dot || !text || !badge) return;
 
       if (!gasWebAppUrl && !IS_GAS_HOSTED) {
         dot.className = 'w-2 h-2 rounded-full bg-amber-400';
         text.textContent = '連結雙帳雲端 (GAS)';
+        if (textMobile) textMobile.textContent = '未連線';
         badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200';
         badge.textContent = '尚未連線';
+        if (mobileSyncBadge) {
+          mobileSyncBadge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200';
+          mobileSyncBadge.textContent = '尚未連線';
+        }
         if (logText && !customMsg) {
           logText.textContent = '尚未綁定 Google Apps Script 網址，目前使用本機暫存。綁定後個人帳與公司帳將自動獨立分流同步至試算表！';
         }
         return;
       }
 
+      const nowTimeStr = lastSyncSuccessTime 
+        ? lastSyncSuccessTime.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+        : '';
+
       if (statusState === 'syncing') {
         dot.className = 'w-2 h-2 rounded-full bg-indigo-500 animate-ping';
-        text.textContent = '雙帳同步中...';
+        text.textContent = '雙帳自動同步中...';
+        if (textMobile) textMobile.textContent = '同步中';
         badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200';
-        badge.textContent = '同步中...';
+        badge.textContent = '自動同步中...';
+        if (mobileSyncBadge) {
+          mobileSyncBadge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 animate-pulse';
+          mobileSyncBadge.textContent = '雲端同步中...';
+        }
       } else if (statusState === 'error') {
         dot.className = 'w-2 h-2 rounded-full bg-rose-500';
         text.textContent = '雲端連線異常';
+        if (textMobile) textMobile.textContent = '異常';
         badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200';
         badge.textContent = '連線失敗';
+        if (mobileSyncBadge) {
+          mobileSyncBadge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200';
+          mobileSyncBadge.textContent = '連線失敗';
+        }
       } else {
         dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-        text.textContent = '雙帳分頁已連線';
+        text.textContent = nowTimeStr ? `已自動同步 (${nowTimeStr})` : '雙帳即時自動同步中';
+        if (textMobile) textMobile.textContent = nowTimeStr ? `已同步 ${nowTimeStr}` : '已同步';
         badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
-        badge.textContent = '已連線自動分流同步';
+        badge.textContent = nowTimeStr ? `已自動同步 (${nowTimeStr})` : '已連線自動分流同步';
+        if (mobileSyncBadge) {
+          mobileSyncBadge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
+          mobileSyncBadge.textContent = nowTimeStr ? `已即時同步 ${nowTimeStr}` : '雙向即時同步中';
+        }
       }
 
       if (logText && customMsg) {
@@ -1435,18 +1545,23 @@ function doPost(e) {
       }
     }
 
-    async function pushStateToGasCloud(silent = false) {
+    async function pushStateToGasCloud(silent = false, isAuto = false) {
       if (IS_GAS_HOSTED) {
         updateGasStatusUI('syncing', '正在分流寫入「個人收支明細」與「公司收支明細」...');
         google.script.run
           .withSuccessHandler(data => {
-            const nowStr = new Date().toLocaleTimeString('zh-TW');
-            updateGasStatusUI('ok', `雙帳雲端分頁寫入成功（時間：${nowStr}，個人 ${personalTransactions.length} 筆，公司 ${companyTransactions.length} 筆）`);
-            if (!silent) showToast(`已同步至試算表（個人 ${personalTransactions.length} 筆、公司 ${companyTransactions.length} 筆）！`);
+            lastSyncSuccessTime = new Date();
+            const timeStr = lastSyncSuccessTime.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            updateGasStatusUI('ok', `雙帳雲端自動寫入成功（時間：${timeStr}，個人 ${personalTransactions.length} 筆，公司 ${companyTransactions.length} 筆）`);
+            if (isAuto) {
+              showToast(`☁️ 已自動同步至雲端（個人 ${personalTransactions.length} 筆、公司 ${companyTransactions.length} 筆）`, 'info');
+            } else if (!silent) {
+              showToast(`已成功寫入試算表（個人 ${personalTransactions.length} 筆、公司 ${companyTransactions.length} 筆）！`);
+            }
           })
           .withFailureHandler(err => {
             updateGasStatusUI('error', `雲端寫入失敗：${err.message || err}`);
-            if (!silent) showToast('雲端寫入失敗', 'error');
+            showToast('雲端自動同步失敗，請檢查網路連線', 'error');
           })
           .writeAllToSheet({
             personalTransactions,
@@ -1462,6 +1577,7 @@ function doPost(e) {
         const res = await fetch(gasWebAppUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          redirect: 'follow',
           body: JSON.stringify({
             action: 'syncAll',
             monthlyBudget: monthlyBudget,
@@ -1474,62 +1590,50 @@ function doPost(e) {
         });
         const data = await res.json();
         if (data && data.status === 'ok') {
-          const nowStr = new Date().toLocaleTimeString('zh-TW');
-          updateGasStatusUI('ok', `雙帳雲端分頁同步成功（時間：${nowStr}，個人 ${personalTransactions.length} 筆，公司 ${companyTransactions.length} 筆）`);
-          if (!silent) showToast(`成功分流寫入試算表（個人 ${personalTransactions.length} 筆、公司 ${companyTransactions.length} 筆）！`);
+          lastSyncSuccessTime = new Date();
+          const timeStr = lastSyncSuccessTime.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          updateGasStatusUI('ok', `雙帳雲端分頁自動同步成功（時間：${timeStr}，個人 ${personalTransactions.length} 筆，公司 ${companyTransactions.length} 筆）`);
+          if (isAuto) {
+            showToast(`☁️ 已自動同步寫入雲端試算表（${timeStr}）`, 'info');
+          } else if (!silent) {
+            showToast(`成功分流寫入試算表（個人 ${personalTransactions.length} 筆、公司 ${companyTransactions.length} 筆）！`);
+          }
         } else {
           throw new Error((data && data.message) || '回應格式不符');
         }
       } catch (err) {
         updateGasStatusUI('error', `雲端同步失敗：請確認 Apps Script 部署權限為「所有人 (Anyone)」。詳細：${err.message}`);
-        if (!silent) showToast('雲端連線失敗，請檢查網址與權限', 'error');
+        if (!silent || isAuto) {
+          showToast('雲端同步失敗，請檢查網路連線或權限', 'error');
+        }
       }
     }
 
     async function pullStateFromGasCloud(silent = false) {
+      lastPullAttemptTime = Date.now();
+      isPullingGas = true;
+
       if (IS_GAS_HOSTED) {
-        updateGasStatusUI("syncing", "正在從試算表讀取個人與公司獨立分頁...");
+        if (!silent) updateGasStatusUI("syncing", "正在從試算表讀取個人與公司獨立分頁...");
         google.script.run
           .withSuccessHandler(data => {
-            if (data && data.status === "ok") {
-              let incoming = [];
-              if (Array.isArray(data.personalTransactions) || Array.isArray(data.companyTransactions)) {
-                if (Array.isArray(data.personalTransactions)) {
-                  data.personalTransactions.forEach(t => incoming.push({ ...t, account: "personal" }));
-                }
-                if (Array.isArray(data.companyTransactions)) {
-                  data.companyTransactions.forEach(t => incoming.push({ ...t, account: "company" }));
-                }
-              } else if (Array.isArray(data.transactions)) {
-                incoming = data.transactions;
-              }
-
-              if (incoming.length > 0) {
-                const p = incoming.filter(t => !isCompanyTx(t)).map(t => ({ ...t, account: "personal" }));
-                const c = incoming.filter(t => isCompanyTx(t)).map(t => ({ ...t, account: "company" }));
-                if (p.length > 0) personalTransactions = p;
-                if (c.length > 0) companyTransactions = c;
-              }
-
-              if (data.monthlyBudget !== undefined) monthlyBudget = Number(data.monthlyBudget) || 25000;
-              if (data.companyCapital !== undefined) companyCapital = Number(data.companyCapital) || 1500000;
-              renderAll(true);
-              const nowStr = new Date().toLocaleTimeString("zh-TW");
-              updateGasStatusUI("ok", `雙帳雲端讀取成功（個人 ${personalTransactions.length} 筆，公司 ${companyTransactions.length} 筆，時間：${nowStr}）`);
-              if (!silent) showToast(`已從雲端載入：個人 ${personalTransactions.length} 筆、公司 ${companyTransactions.length} 筆！`);
-            }
+            isPullingGas = false;
+            handlePullDataSuccess(data, silent);
           })
           .withFailureHandler(err => {
+            isPullingGas = false;
             updateGasStatusUI("error", `雲端讀取失敗：${err.message || err}`);
+            if (!silent) showToast("無法從雲端讀取資料", "error");
           })
           .readAllFromSheet();
         return;
       }
       if (!gasWebAppUrl) {
+        isPullingGas = false;
         if (!silent) showToast("請先輸入 Google Apps Script 網址", "error");
         return;
       }
-      updateGasStatusUI("syncing", "正在從試算表讀取「個人收支明細」與「公司收支明細」...");
+      if (!silent) updateGasStatusUI("syncing", "正在從試算表讀取「個人收支明細」與「公司收支明細」...");
       try {
         const sep = gasWebAppUrl.includes("?") ? "&" : "?";
         const res = await fetch(gasWebAppUrl + sep + "api=1&t=" + Date.now(), {
@@ -1537,58 +1641,84 @@ function doPost(e) {
           redirect: "follow"
         });
         const data = await res.json();
-        if (data && data.status === "ok") {
-          let incoming = [];
-          if (Array.isArray(data.personalTransactions) || Array.isArray(data.companyTransactions)) {
-            if (Array.isArray(data.personalTransactions)) {
-              data.personalTransactions.forEach(t => incoming.push({ ...t, account: "personal" }));
-            }
-            if (Array.isArray(data.companyTransactions)) {
-              data.companyTransactions.forEach(t => incoming.push({ ...t, account: "company" }));
-            }
-          } else if (Array.isArray(data.transactions)) {
-            incoming = data.transactions;
-          }
-
-          if (incoming.length > 0) {
-            const p = incoming.filter(t => !isCompanyTx(t)).map(t => ({ ...t, account: "personal" }));
-            const c = incoming.filter(t => isCompanyTx(t)).map(t => ({ ...t, account: "company" }));
-            if (p.length > 0) personalTransactions = p;
-            if (c.length > 0) companyTransactions = c;
-          }
-
-          // Safety guard: Never wipe transactions if cloud returns empty
-          if (personalTransactions.length === 0) {
-            personalTransactions = [...SPREADSHEET_PERSONAL_TRANSACTIONS];
-          }
-          if (companyTransactions.length === 0) {
-            companyTransactions = [...SPREADSHEET_COMPANY_TRANSACTIONS];
-          }
-
-          if (data.monthlyBudget !== undefined) {
-            monthlyBudget = Number(data.monthlyBudget) || 25000;
-          }
-          if (data.companyCapital !== undefined) {
-            companyCapital = Number(data.companyCapital) || 1500000;
-          }
-          if (currentMonthFilter !== "all") {
-            const activeTx = getActiveAccountTransactions();
-            if (!activeTx.some(t => t.date && t.date.startsWith(currentMonthFilter))) {
-              currentMonthFilter = getInitialActiveMonth();
-              const mPicker = document.getElementById("monthFilterInput");
-              if (mPicker) mPicker.value = currentMonthFilter;
-            }
-          }
-          renderAll(true);
-          const nowStr = new Date().toLocaleTimeString("zh-TW");
-          updateGasStatusUI("ok", `雙帳雲端讀取成功（個人 ${personalTransactions.length} 筆，公司 ${companyTransactions.length} 筆，時間：${nowStr}）`);
-          if (!silent) showToast(`已從雲端試算表同步雙帳明細（個人 ${personalTransactions.length} 筆、公司 ${companyTransactions.length} 筆）！`);
-        } else {
-          throw new Error((data && data.message) || "回應格式錯誤");
-        }
+        isPullingGas = false;
+        handlePullDataSuccess(data, silent);
       } catch (err) {
+        isPullingGas = false;
         updateGasStatusUI("error", `讀取失敗：請確認 Apps Script 部署權限為「所有人 (Anyone)」。詳細：${err.message}`);
         if (!silent) showToast("無法從雲端讀取資料", "error");
+      }
+    }
+
+    function handlePullDataSuccess(data, silent = false) {
+      if (!data || data.status !== "ok") {
+        if (!silent) showToast("雲端資料回應格式錯誤", "error");
+        return;
+      }
+
+      let incoming = [];
+      if (Array.isArray(data.personalTransactions) || Array.isArray(data.companyTransactions)) {
+        if (Array.isArray(data.personalTransactions)) {
+          data.personalTransactions.forEach(t => incoming.push({ ...t, account: "personal" }));
+        }
+        if (Array.isArray(data.companyTransactions)) {
+          data.companyTransactions.forEach(t => incoming.push({ ...t, account: "company" }));
+        }
+      } else if (Array.isArray(data.transactions)) {
+        incoming = data.transactions;
+      }
+
+      let newPersonal = personalTransactions;
+      let newCompany = companyTransactions;
+
+      if (incoming.length > 0) {
+        const p = incoming.filter(t => !isCompanyTx(t)).map(t => ({ ...t, account: "personal" }));
+        const c = incoming.filter(t => isCompanyTx(t)).map(t => ({ ...t, account: "company" }));
+        if (p.length > 0) newPersonal = p;
+        if (c.length > 0) newCompany = c;
+      }
+
+      // Safety guard: Never wipe transactions if cloud returns empty
+      if (newPersonal.length === 0 && personalTransactions.length > 0) {
+        newPersonal = personalTransactions;
+      }
+      if (newCompany.length === 0 && companyTransactions.length > 0) {
+        newCompany = companyTransactions;
+      }
+
+      const diffDetected = hasTransactionListDiff(personalTransactions, newPersonal) ||
+                           hasTransactionListDiff(companyTransactions, newCompany);
+
+      personalTransactions = newPersonal;
+      companyTransactions = newCompany;
+
+      if (data.monthlyBudget !== undefined) {
+        monthlyBudget = Number(data.monthlyBudget) || 25000;
+      }
+      if (data.companyCapital !== undefined) {
+        companyCapital = Number(data.companyCapital) || 1500000;
+      }
+
+      if (currentMonthFilter !== "all") {
+        const activeTx = getActiveAccountTransactions();
+        if (!activeTx.some(t => t.date && t.date.startsWith(currentMonthFilter))) {
+          currentMonthFilter = getInitialActiveMonth();
+          const mPicker = document.getElementById("monthFilterInput");
+          if (mPicker) mPicker.value = currentMonthFilter;
+        }
+      }
+
+      // 重新渲染畫面（skipCloudSync = true，避免讀取反向觸發寫入無限循環）
+      renderAll(true);
+
+      lastSyncSuccessTime = new Date();
+      const nowStr = lastSyncSuccessTime.toLocaleTimeString("zh-TW", { hour: '2-digit', minute: '2-digit' });
+      updateGasStatusUI("ok", `雙帳雲端讀取成功（個人 ${personalTransactions.length} 筆，公司 ${companyTransactions.length} 筆，時間：${nowStr}）`);
+
+      if (!silent) {
+        showToast(`已從雲端試算表同步雙帳明細（個人 ${personalTransactions.length} 筆、公司 ${companyTransactions.length} 筆）！`);
+      } else if (diffDetected) {
+        showToast(`📲 雲端已自動更新最新明細（個人 ${personalTransactions.length} 筆、公司 ${companyTransactions.length} 筆）！`, 'info');
       }
     }
 
@@ -2601,6 +2731,27 @@ function doPost(e) {
       if (IS_GAS_HOSTED || gasWebAppUrl) {
         pullStateFromGasCloud(!shouldNotifyPull);
       }
+
+      // 【跨裝置無感自動同步】：當切換分頁、手機螢幕喚醒時，自動檢查並拉取雲端最新資料
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          triggerAutoCloudPull(true);
+        }
+      });
+      window.addEventListener('focus', () => {
+        triggerAutoCloudPull(true);
+      });
+      window.addEventListener('online', () => {
+        showToast('網路已恢復連線，正在自動同步雲端...', 'info');
+        scheduleAutoCloudPush(100);
+      });
+
+      // 【背景智慧定時輪詢】：每 18 秒自動靜默確認一次雲端最新異動
+      setInterval(() => {
+        if (document.visibilityState === 'visible' && !isPushingGas && (Date.now() - lastLocalMutationTime > 4000)) {
+          triggerAutoCloudPull(true);
+        }
+      }, 18000);
 
       if (window.innerWidth < 1024) {
         switchMobileTab('record');
